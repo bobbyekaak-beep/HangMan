@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import customtkinter as ctk
 import importlib
 
@@ -76,3 +77,7 @@ class HangmanGodzillaApp(ctk.CTk):
 if __name__ == "__main__":
     app = HangmanGodzillaApp()
     app.mainloop()
+=======
+print("My name is Bobby") 
+print("test my name is andrean")
+>>>>>>> c8bf525e80600abbfee9a44e50f68965a9b0965b
