@@ -65,6 +65,7 @@ class LoginPage(tk.Frame):
             
             if hasil:
                 messagebox.showinfo("Sukses", f"Selamat datang, {user}!")
+                self.controller.user_aktif = user
                 # Kosongkan kolom isian setelah berhasil masuk
                 self.entry_user.delete(0, tk.END)
                 self.entry_pass.delete(0, tk.END)

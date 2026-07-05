@@ -11,6 +11,8 @@ class HangmanApp(tk.Tk):
         self.configure(bg="white")
         self.resizable(False, False) # Kunci ukuran layar agar tidak berantakan
 
+        self.user_aktif = None
+
         self.container = tk.Frame(self, bg="white")
         self.container.pack(fill="both", expand=True)
 
