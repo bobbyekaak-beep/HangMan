@@ -3,21 +3,21 @@ from tkinter import ttk
 import random
 import winsound
 
-class Screen6Gameplay(tk.Frame):
+class Screen7GameplayLevel2(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg="#F0F4F6")
         self.parent = parent
 
-        # ── CONFIG LEVEL 1 (MULTI-KATA) ──────────────────────────
-        # Menggunakan kata yang lebih pendek dan mudah untuk Level 1
-        self.daftar_kata = ["KUCING", "AYAM", "SINGA", "RUSA"]
+        # ── CONFIG LEVEL 2 (LEBIH BANYAK KATA & WAKTU BERKURANG) ─────
+        # Jumlah kata bertambah (6 kata) dan tingkat kesulitan huruf sedikit naik
+        self.daftar_kata = ["HARIMAU", "JERAPAH", "MERPATI", "KOMODO", "SERGALA", "BANTENG"]
         self.indeks_kata_sekarang = 0
         self.kata_rahasia = self.daftar_kata[self.indeks_kata_sekarang]
         
         self.huruf_ditebak = set()
         self.hp_player,   self.hp_player_max   = 100,  100
         self.hp_musuh,    self.hp_musuh_max    = 100,  100
-        self.sisa_waktu = 120  # Waktu lebih longgar untuk Level 1 (02:00)
+        self.sisa_waktu = 90  # Waktu berkurang untuk Level 2 (01:30)
 
         # Statistik akumulatif untuk layar hasil (Result Screen)
         self.total_tebakan_benar = 0
@@ -26,9 +26,10 @@ class Screen6Gameplay(tk.Frame):
         # Hitung damage berdasarkan kata pertama
         self.hitung_damage_kata()
 
-        self.stok_hint  = 3  # Ditambah untuk Level 1
+        # Stok item disesuaikan untuk tantangan Level 2
+        self.stok_hint  = 2  
         self.stok_waktu = 2
-        self.stok_heal  = 3
+        self.stok_heal  = 2
 
         self.game_selesai  = False
 
@@ -65,7 +66,8 @@ class Screen6Gameplay(tk.Frame):
         self.lbl_hp_p = tk.Label(kiri, bg="#F0F4F6", text=f"{self.hp_player}/{self.hp_player_max}", font=("Arial", 9), fg="#333333")
         self.lbl_hp_p.pack(anchor="w")
 
-        self.lbl_timer = tk.Label(hud, text="⏱  02:00", bg="#F0F4F6", font=("Arial", 15, "bold"), fg="#3E2723")
+        m, s = divmod(self.sisa_waktu, 60)
+        self.lbl_timer = tk.Label(hud, text=f"⏱  {m:02d}:{s:02d}", font=("Arial", 15, "bold"), fg="#3E2723", bg="#F0F4F6")
         self.lbl_timer.pack(side="left", expand=True)
 
         kanan = tk.Frame(hud, bg="#F0F4F6")
@@ -81,27 +83,26 @@ class Screen6Gameplay(tk.Frame):
         self.lbl_hp_g.pack(anchor="e")
 
         # ── 2. STATUS BANNER ─────────────────────────────────────
-        self.status_banner = tk.Frame(self, bg="#1E88E5", height=30)
+        self.status_banner = tk.Frame(self, bg="#FF9800", height=30) # Warna banner orange tanda level naik
         self.status_banner.pack(fill="x", padx=12, pady=(4, 2))
         self.status_banner.pack_propagate(False)
 
-        self.lbl_status = tk.Label(self.status_banner, bg="#1E88E5", text="MULAI PERMAINAN!", font=("Arial", 11, "bold"), fg="white")
+        self.lbl_status = tk.Label(self.status_banner, bg="#FF9800", text="MEMASUKI LEVEL 2!", font=("Arial", 11, "bold"), fg="white")
         self.lbl_status.pack(expand=True)
 
         # ── 3. INFO LEVEL & KATEGORI ──────────────────────────────
         info_frame = tk.Frame(self, bg="white", highlightbackground="#E0E0E0", highlightthickness=1)
         info_frame.pack(fill="x", padx=12, pady=(4, 2))
 
-        self.lbl_level = tk.Label(info_frame, text=f"LEVEL 1 (Kata {self.indeks_kata_sekarang + 1}/{len(self.daftar_kata)})", bg="white", font=("Arial", 13, "bold"), fg="#1E88E5")
+        self.lbl_level = tk.Label(info_frame, text=f"LEVEL 2 (Kata {self.indeks_kata_sekarang + 1}/{len(self.daftar_kata)})", bg="white", font=("Arial", 13, "bold"), fg="#FF9800")
         self.lbl_level.pack(pady=(8, 0))
-        tk.Label(info_frame, text="Kategori: Hewan Mudah", bg="white", font=("Arial", 11), fg="#555555").pack(pady=(0, 8))
+        tk.Label(info_frame, text="Kategori: Hewan Menengah", bg="white", font=("Arial", 11), fg="#555555").pack(pady=(0, 8))
 
         # ── 4. SLOT KATA RAHASIA ──────────────────────────────────
         self.word_frame = tk.Frame(self, bg="#F0F4F6")
         self.word_frame.pack(pady=14)
 
         # ── 5. KETERANGAN HURUF DITEBAK ──────────────────────────
-        # Ditaruh di sini agar variabelnya tercipta sebelum fungsi update_slots() memanggilnya
         self.lbl_ditebak = tk.Label(self, bg="#F0F4F6", text="Huruf sudah ditebak: -", font=("Arial", 10), fg="#777777")
         self.lbl_ditebak.pack()
 
@@ -117,7 +118,7 @@ class Screen6Gameplay(tk.Frame):
         self.item_bar.pack_propagate(False)
         self.render_bottom_items()
 
-        # Panggil update slots di paling bawah setup_ui setelah semua objek label ter-inisiasi
+        # Panggil update slots di paling bawah setup_ui
         self.update_slots()
 
     def update_slots(self):
@@ -128,11 +129,11 @@ class Screen6Gameplay(tk.Frame):
             terbuka = char in self.huruf_ditebak
             box = tk.Frame(self.word_frame, bg="#FFFFFF" if terbuka else "#F0F4F6",
                            highlightbackground="#B0BEC5" if terbuka else "#F0F4F6", highlightthickness=1, width=38, height=44)
-            box.pack(side="left", padx=5)
+            box.pack(side="left", padx=3) # Sedikit dirapatkan agar kata yang panjang muat
             box.pack_propagate(False)
 
             tk.Label(box, text=char if terbuka else "_", bg="#FFFFFF" if terbuka else "#F0F4F6",
-                     font=("Arial", 22, "bold"), fg="#1565C0" if terbuka else "#333333").pack(expand=True)
+                     font=("Arial", 20, "bold"), fg="#1565C0" if terbuka else "#333333").pack(expand=True)
 
         if self.huruf_ditebak:
             huruf_str = ", ".join(sorted(self.huruf_ditebak))
@@ -141,7 +142,6 @@ class Screen6Gameplay(tk.Frame):
             self.lbl_ditebak.configure(text="Huruf sudah ditebak: -")
 
     def build_keyboard(self):
-        # Bersihkan keyboard lama jika ada (untuk reset saat ganti kata)
         for w in self.kb_frame.winfo_children():
             w.destroy()
         self.keys.clear()
@@ -197,7 +197,6 @@ class Screen6Gameplay(tk.Frame):
             self.total_tebakan_benar += 1
             self.keys[h].configure(bg="#4CAF50", fg="white", state="disabled")
             
-            # Pengurangan HP musuh secara dinamis per kata
             self.hp_musuh = max(0, self.hp_musuh - self.damage_per_huruf)
             
             kata_terbuka = all(c in self.huruf_ditebak for c in self.huruf_unik)
@@ -212,12 +211,12 @@ class Screen6Gameplay(tk.Frame):
         else:
             self.total_tebakan_salah += 1
             self.keys[h].configure(bg="#E53935", fg="white", state="disabled")
-            # Mengurangi pinalti HP dari -20 menjadi -15 agar lebih toleran di Level 1
-            self._set_banner("#E53935", "❌  TEBAKAN SALAH!  -15 HP Kamu")
             
+            # Kembali ke penalti -20 HP standar agar lebih menantang di Level 2
+            self._set_banner("#E53935", "❌  TEBAKAN SALAH!  -20 HP Kamu")
             winsound.Beep(300, 180)
 
-            self.hp_player = max(0, self.hp_player - 15)
+            self.hp_player = max(0, self.hp_player - 20)
             self.bar_p['value'] = (self.hp_player / self.hp_player_max) * 100
             self.lbl_hp_p.configure(text=f"{self.hp_player}/{self.hp_player_max}")
             self.guncang_window(10)
@@ -227,22 +226,18 @@ class Screen6Gameplay(tk.Frame):
         self.cek_kondisi()
 
     def lanjut_kata_berikutnya(self):
-        """Reset data game khusus untuk kata berikutnya tanpa merestart HP Player/Waktu"""
         self.indeks_kata_sekarang += 1
         self.kata_rahasia = self.daftar_kata[self.indeks_kata_sekarang]
         self.huruf_ditebak = set()
         
-        # Reset HP Musuh ke penuh untuk dihadapi di kata baru
         self.hp_musuh = self.hp_musuh_max
         self.bar_g['value'] = 100
         self.lbl_hp_g.configure(text=f"{self.hp_musuh}/{self.hp_musuh_max}")
         
-        # Hitung ulang damage proporsional kata baru
         self.hitung_damage_kata()
         
-        # Update UI Teks Level & Slot Kata Baru
-        self.lbl_level.configure(text=f"LEVEL 1 (Kata {self.indeks_kata_sekarang + 1}/{len(self.daftar_kata)})")
-        self._set_banner("#1E88E5", "KATA BARU! Lanjutkan Menebak.")
+        self.lbl_level.configure(text=f"LEVEL 2 (Kata {self.indeks_kata_sekarang + 1}/{len(self.daftar_kata)})")
+        self._set_banner("#FF9800", "KATA BARU! Lanjutkan Menebak.")
         
         self.update_slots()
         self.build_keyboard()
@@ -252,18 +247,15 @@ class Screen6Gameplay(tk.Frame):
 
         kata_terbuka = all(c in self.huruf_ditebak for c in self.huruf_unik)
 
-        # Kondisi ketika satu kata berhasil ditebak
         if kata_terbuka and self.hp_musuh <= 0:
-            # Cek apakah masih ada kata berikutnya dalam list
             if self.indeks_kata_sekarang < len(self.daftar_kata) - 1:
                 winsound.Beep(1200, 100)
                 self._set_banner("#4CAF50", "✨ KATA TERTEBAK! Menuju kata selanjutnya...")
-                # Beri jeda 1 detik sebelum memuat kata baru agar user tidak kaget
                 self.after(1000, self.lanjut_kata_berikutnya)
             else:
-                # Jika semua kata di Level 1 sudah habis terjawab, Player MENANG TOTAL
+                # Menang Total Level 2
                 self.game_selesai = True
-                self._set_banner("#4CAF50", "🏆  LEVEL 1 SELESAI! KAMU MENANG!")
+                self._set_banner("#4CAF50", "🏆  LEVEL 2 SELESAI! KAMU MENANG TOTAL!")
 
                 self.after(100, lambda: winsound.Beep(1200, 150))
                 self.after(250, lambda: winsound.Beep(1600, 300))
@@ -278,7 +270,7 @@ class Screen6Gameplay(tk.Frame):
 
         elif self.hp_player <= 0 or self.sisa_waktu <= 0:
             self.game_selesai = True
-            self._set_banner("#E53935", "💀  GAME OVER!")
+            self._set_banner("#E53935", "💀  GAME OVER LEVEL 2!")
 
             self.after(100, lambda: winsound.Beep(400, 200))
             self.after(320, lambda: winsound.Beep(250, 400))
@@ -291,10 +283,10 @@ class Screen6Gameplay(tk.Frame):
             self.after(1200, lambda: self.parent.switch_screen("screenresult.py"))
 
     def hitung_skor(self):
-        base        = self.total_tebakan_benar * 20
-        bonus_waktu = self.sisa_waktu * 2
-        bonus_hp    = self.hp_player
-        penalti     = self.total_tebakan_salah * 10  # Penalti dikurangi sedikit agar ramah pemula
+        base        = self.total_tebakan_benar * 25 # Skor per huruf naik karena lebih menantang
+        bonus_waktu = self.sisa_waktu * 3
+        bonus_hp    = self.hp_player * 2
+        penalti     = self.total_tebakan_salah * 15 
         return max(0, base + bonus_waktu + bonus_hp - penalti)
 
     def aksi_hint(self):
@@ -322,7 +314,7 @@ class Screen6Gameplay(tk.Frame):
             self._notif_habis("❤️ Pulihkan HP habis! Beli di Toko.")
             return
         self.stok_heal -= 1
-        self.hp_player = min(self.hp_player_max, self.hp_player + 25) # Heal dinaikkan jadi +25 untuk Level 1
+        self.hp_player = min(self.hp_player_max, self.hp_player + 20) # Heal disesuaikan menjadi +20
         self.bar_p['value'] = (self.hp_player / self.hp_player_max) * 100
         self.lbl_hp_p.configure(text=f"{self.hp_player}/{self.hp_player_max}")
         self.render_bottom_items()
@@ -331,7 +323,7 @@ class Screen6Gameplay(tk.Frame):
     def _notif_habis(self, pesan):
         self._set_banner("#FF8F00", pesan)
         winsound.Beep(200, 300)
-        self.after(2000, lambda: self._set_banner("#1E88E5", "Pilih huruf!"))
+        self.after(2000, lambda: self._set_banner("#FF9800", "Pilih huruf!"))
 
     def guncang_window(self, loop):
         if loop > 0:
@@ -359,7 +351,7 @@ class Screen6Gameplay(tk.Frame):
         if self.sisa_waktu > 0 and self.hp_player > 0 and self.hp_musuh > 0:
             self.sisa_waktu -= 1
             m, s = divmod(self.sisa_waktu, 60)
-            self.lbl_timer.configure(text=f"⏱  {m:02d}:{s:02d}", fg="#E53935" if self.sisa_waktu <= 10 else "#3E2723")
+            self.lbl_timer.configure(text=f"⏱  {m:02d}:{s:02d}", fg="#E53935" if self.sisa_waktu <= 15 else "#3E2723")
             if self.sisa_waktu <= 5:
                 winsound.Beep(600, 80)
             self.after(1000, self.update_timer)
@@ -371,7 +363,7 @@ if __name__ == "__main__":
     class MockParent(tk.Tk):
         def __init__(self):
             super().__init__()
-            self.title("Game Hangman Level 1 - Multi Kata")
+            self.title("Game Hangman Level 2 - Multi Kata")
             self.geometry("420x580")
             self.configure(bg="#F0F4F6")
             self.game_results = {}
@@ -385,6 +377,6 @@ if __name__ == "__main__":
             for k, v in kwargs.items(): print(f"  - {k}: {v}")
 
     app_parent = MockParent()
-    game_frame = Screen6Gameplay(parent=app_parent)
+    game_frame = Screen7GameplayLevel2(parent=app_parent)
     game_frame.pack(fill="both", expand=True)
     app_parent.mainloop()
