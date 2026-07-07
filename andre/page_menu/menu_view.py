@@ -11,8 +11,13 @@ class MenuPage(tk.Frame):
         top_bar.pack(fill="x", padx=20, pady=20)
         
         tk.Label(top_bar, text="👤 Player (Aktif)", font=("Arial", 12, "bold"), bg="white").pack(side="left")
-        tk.Label(top_bar, text="💰 1.250", font=("Arial", 12, "bold"), fg="#FF9800", bg="white").pack(side="right")
 
+        frame_koin = tk.Frame(top_bar, bg="white")
+        frame_koin.pack(side="right")
+        tk.Label(frame_koin, text="💰 1.250", font=("Arial", 12, "bold"), fg="#FF9800", bg="white").pack(side="left", padx=(0, 5))
+        tk.Button(frame_koin, text=" ➕ ", bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), bd=0,
+                  command=lambda: self.belum_tersedia("Toko")).pack(side="left")
+        
         # Kumpulan Tombol Menu yang sudah dipindah dari depan
         tk.Button(self, text="MULAI PERMAINAN", bg="#4CAF50", fg="white", font=("Arial", 12, "bold"),
                   width=25, height=2, bd=0, command=self.belum_tersedia).pack(pady=8)
@@ -30,8 +35,10 @@ class MenuPage(tk.Frame):
                   width=25, height=2, bd=0, command=self.belum_tersedia).pack(pady=8)
 
         # Tombol Keluar
-        tk.Button(self, text="Keluar Akun (Logout)", fg="red", bg="white", bd=0, font=("Arial", 10),
-                  command=self.proses_keluar).pack(side="bottom", pady=30)
+        tk.Button(self, text="KELUAR (LOGOUT)", bg="#F44336", fg="white", font=("Arial", 12, "bold"),
+                  width=25, height=2, bd=0, 
+                  command=lambda: self.proses_keluar()).pack(side="bottom", pady=30)
+
     def cek_akses(self, nama_fitur):
         # Kalau ingatan aplikasi kosong (belum login)
         if self.controller.user_aktif is None:

@@ -11,24 +11,44 @@ class LoginPage(tk.Frame):
 
         # Form Input
         tk.Label(self, text="Username", bg="white", font=("Arial", 10)).pack(anchor="w", padx=40)
-        self.entry_user = tk.Entry(self, font=("Arial", 12), bg="#F9F9F9")
-        self.entry_user.pack(fill="x", padx=40, pady=(0, 15), ipady=8)
+        self.entry_user = tk.Entry(self, font=("Arial", 12), bg="#F9F9F9", relief="solid", bd=1)
+        self.entry_user.pack(fill="x", padx=40, pady=(0, 15), ipady=6)
         
         tk.Label(self, text="Kata Sandi", bg="white", font=("Arial", 10)).pack(anchor="w", padx=40)
-        self.entry_pass = tk.Entry(self, font=("Arial", 12), bg="#F9F9F9", show="*")
-        self.entry_pass.pack(fill="x", padx=40, pady=(0, 25), ipady=8)
+
+        frame_pass = tk.Frame(self, bg="white")
+        frame_pass.pack(fill="x", padx=40, pady=(0, 25))
+
+        self.entry_pass = tk.Entry(frame_pass, font=("Arial", 12), bg="#F9F9F9", show="*", relief="solid", bd=1)
+        self.entry_pass.pack(side="left", fill="x", expand=True, ipady=6)
+
+        # Tombol Mata
+        btn_lihat = tk.Button(frame_pass, text="👁", font=("Arial", 12), bg="#E0E0E0", bd=0, cursor="hand2")
+        btn_lihat.pack(side="right", padx=(5, 0), ipadx=10, fill="y")
+        
+        # Mengikat tombol dengan aksi tekan (ButtonPress-1) dan lepas (ButtonRelease-1)
+        btn_lihat.bind("<ButtonPress-1>", self.tampilkan_password)
+        btn_lihat.bind("<ButtonRelease-1>", self.sembunyikan_password)
 
         # Tombol Aksi
-        tk.Button(self, text="LOGIN", bg="#4CAF50", fg="white", font=("Arial", 12, "bold"), 
+        tk.Button(self, text="LOGIN", bg="#4CAF50", fg="white", font=("Arial", 12, "bold"), height=2, bd=0,
                   command=self.proses_login).pack(fill="x", padx=40, pady=5, ipady=5)
                   
-        tk.Button(self, text="DAFTAR AKUN BARU", bg="#2196F3", fg="white", font=("Arial", 12, "bold"), 
+        tk.Button(self, text="DAFTAR AKUN BARU", bg="#2196F3", fg="white", font=("Arial", 12, "bold"), height=2, bd=0,
                   command=self.proses_daftar).pack(fill="x", padx=40, pady=5, ipady=5)
 
         # Tombol Kembali
         tk.Button(self, text="← Kembali ke Awal", bg="white", bd=0, fg="#888",
                   command=lambda: controller.show_frame("SplashPage")).pack(pady=30)
 
+    def tampilkan_password(self, event):
+        # Menghilangkan bintang (show="")
+        self.entry_pass.config(show="")
+
+    def sembunyikan_password(self, event):
+        # Mengembalikan bintang (show="*")
+        self.entry_pass.config(show="*")
+        
     def proses_daftar(self):
         user = self.entry_user.get()
         password = self.entry_pass.get()
