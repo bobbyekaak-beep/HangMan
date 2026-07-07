@@ -10,11 +10,15 @@ class MenuPage(tk.Frame):
         top_bar = tk.Frame(self, bg="white")
         top_bar.pack(fill="x", padx=20, pady=20)
         
-        tk.Label(top_bar, text="👤 Player (Aktif)", font=("Arial", 12, "bold"), bg="white").pack(side="left")
+        self.label_pemain = tk.Label(top_bar, text="👤 Player", font=("Arial", 12, "bold"), bg="white")
+        self.label_pemain.pack(side="left")
 
         frame_koin = tk.Frame(top_bar, bg="white")
         frame_koin.pack(side="right")
-        tk.Label(frame_koin, text="💰 1.250", font=("Arial", 12, "bold"), fg="#FF9800", bg="white").pack(side="left", padx=(0, 5))
+
+        self.label_koin = tk.Label(frame_koin, text="💰 0", font=("Arial", 12, "bold"), fg="#FF9800", bg="white")
+        self.label_koin.pack(side="left", padx=(0, 5))
+
         tk.Button(frame_koin, text=" ➕ ", bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), bd=0,
                   command=lambda: self.belum_tersedia("Toko")).pack(side="left")
         
@@ -38,6 +42,16 @@ class MenuPage(tk.Frame):
         tk.Button(self, text="KELUAR (LOGOUT)", bg="#F44336", fg="white", font=("Arial", 12, "bold"),
                   width=25, height=2, bd=0, 
                   command=lambda: self.proses_keluar()).pack(side="bottom", pady=30)
+
+    def perbarui_tampilan(self):
+        # Fungsi untuk menarik data dari memori lalu mencetaknya ke layar
+        if self.controller.user_aktif:
+            nama = self.controller.user_aktif["username"]
+            koin = self.controller.user_aktif["coins"]
+            
+            self.label_pemain.config(text=f"👤 {nama}")
+            # Format pemisah ribuan agar 1250 tampil sebagai 1.250
+            self.label_koin.config(text=f"💰 {koin:,}".replace(',', '.'))
 
     def cek_akses(self, nama_fitur):
         # Kalau ingatan aplikasi kosong (belum login)

@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from database.koneksi import hubungkan_database
+import hashlib
 
 class LoginPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -48,7 +49,11 @@ class LoginPage(tk.Frame):
     def sembunyikan_password(self, event):
         # Mengembalikan bintang (show="*")
         self.entry_pass.config(show="*")
-        
+
+    def buat_hash(self, password):
+        # Tambahan: Fungsi mengubah password jadi teks acak
+        return hashlib.sha256(password.encode()).hexdigest()
+    
     def proses_daftar(self):
         user = self.entry_user.get()
         password = self.entry_pass.get()
@@ -56,13 +61,15 @@ class LoginPage(tk.Frame):
         if not user or not password:
             messagebox.showwarning("Peringatan", "Username dan Password tidak boleh kosong!")
             return
-            
+        
+        password_hash = self.buat_hash(password)
+
         db = hubungkan_database()
         if db:
             kursor = db.cursor()
             try:
-                sql = "INSERT INTO users (username, password) VALUES (%s, %s)"
-                kursor.execute(sql, (user, password))
+                sql = "INSERT INTO users (username, password, coins) VALUES (%s, %s, %s)"
+                kursor.execute(sql, (user, password_hash, 0))
                 db.commit()
                 messagebox.showinfo("Sukses", "Akun berhasil dibuat! Silakan klik Login.")
             except:
@@ -75,20 +82,27 @@ class LoginPage(tk.Frame):
     def proses_login(self):
         user = self.entry_user.get()
         password = self.entry_pass.get()
-        
+
+        password_hash = self.buat_hash(password)
+
         db = hubungkan_database()
         if db:
             kursor = db.cursor()
-            sql = "SELECT * FROM users WHERE username=%s AND password=%s"
-            kursor.execute(sql, (user, password))
+            sql = "SELECT id, username, coins FROM users WHERE username=%s AND password=%s"
+            kursor.execute(sql, (user, password_hash))
             hasil = kursor.fetchone()
             
             if hasil:
                 messagebox.showinfo("Sukses", f"Selamat datang, {user}!")
-                self.controller.user_aktif = user
+                self.controller.user_aktif = {
+                    "id": hasil[0],
+                    "username": hasil[1],
+                    "coins": hasil[2]
+                }
                 # Kosongkan kolom isian setelah berhasil masuk
                 self.entry_user.delete(0, tk.END)
                 self.entry_pass.delete(0, tk.END)
+                self.controller.frames["MenuPage"].perbarui_tampilan()
                 self.controller.show_frame("MenuPage")
             else:
                 messagebox.showerror("Gagal", "Username atau Password salah!")
