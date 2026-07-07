@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+import math
 
 
 def rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
@@ -15,6 +15,28 @@ def gambar_koin(canvas, x, y, radius=7):
     """Gambar ikon koin bulat kuning di posisi (x, y), return id-nya untuk dipindah nanti."""
     return canvas.create_oval(x - radius, y - radius, x + radius, y + radius,
                                fill="#F2C94C", outline="#D4A62A", width=1)
+
+
+def gambar_bintang(canvas, x, y, radius=8, fill="#F2C94C", outline="#D4A62A"):
+    """Gambar ikon bintang di posisi (x, y), return id-nya untuk dipindah nanti."""
+    points = []
+    for i in range(10):
+        sudut = math.pi / 2 + i * math.pi / 5
+        r = radius if i % 2 == 0 else radius * 0.45
+        px = x + r * math.cos(sudut)
+        py = y - r * math.sin(sudut)
+        points.extend([px, py])
+    return canvas.create_polygon(points, fill=fill, outline=outline, width=1)
+
+
+def gambar_hexagon(canvas, cx, cy, radius, fill):
+    points = []
+    for i in range(6):
+        sudut = math.pi / 6 + i * math.pi / 3
+        px = cx + radius * math.cos(sudut)
+        py = cy + radius * math.sin(sudut)
+        points.extend([px, py])
+    return canvas.create_polygon(points, fill=fill, outline="")
 
 
 WARNA_AVATAR = ["#AED6F1", "#F5CBA7", "#A9DFBF", "#F5B7B1",
@@ -61,12 +83,13 @@ class LeaderboardView(tk.Frame):
                       activeforeground="white", relief="flat", bd=0,
                       cursor="hand2", command=self.buka_toko)
         btn_plus.pack(fill="both", expand=True)
+
     def buka_toko(self):
         # prototype: nanti diganti self.controller.show_frame("Toko")
         print("Masuk ke halaman Toko")
 
     def build_title(self):
-        tk.Label(self, text="🌾  LEADERBOARD  🌾", bg="white", fg="#1a1a2e",
+        tk.Label(self, text="LEADERBOARD", bg="white", fg="#1a1a2e",
                  font=("Arial", 20, "bold")).pack(pady=(10, 2))
 
         deco = tk.Canvas(self, width=200, height=16, bg="white", highlightthickness=0)
@@ -94,17 +117,17 @@ class LeaderboardView(tk.Frame):
         lebar = 110
         canvas = tk.Canvas(parent, width=lebar, height=tinggi + 20, bg="white", highlightthickness=0)
 
-        rounded_rect(canvas, 5, 20, lebar - 5, tinggi + 20, 15, fill=bg, outline="")
-        canvas.create_oval(lebar / 2 - 15, 0, lebar / 2 + 15, 30, fill=medali, outline="")
+        rounded_rect(canvas, 5, 20, lebar - 5, tinggi + 20, 15, fill=bg, outline=medali, width=2)
+        canvas.create_oval(lebar / 2 - 15, 0, lebar / 2 + 15, 30, fill=medali, outline="white", width=2)
         canvas.create_text(lebar / 2, 15, text=str(rank), fill="white", font=("Arial", 12, "bold"))
 
-        canvas.create_oval(lebar / 2 - 28, 45, lebar / 2 + 28, 101, fill=avatar_bg, outline="")
+        gambar_hexagon(canvas, lebar / 2, 73, radius=28, fill=avatar_bg)
         avatar_text_id = canvas.create_text(lebar / 2, 73, text="-", font=("Arial", 18, "bold"))
 
         nama_id = canvas.create_text(lebar / 2, 125, text="-", font=("Arial", 12, "bold"))
 
-        # koin dan skor diposisikan tengah ulang setelah teks diisi (lihat pusatkan_koin_skor)
-        koin_id = gambar_koin(canvas, lebar / 2, 150)
+        # bintang dan skor diposisikan tengah ulang setelah teks diisi (lihat pusatkan_koin_skor)
+        koin_id = gambar_bintang(canvas, lebar / 2, 150, radius=9)
         skor_id = canvas.create_text(lebar / 2, 150, text="0", font=("Arial", 11))
 
         return {"canvas": canvas, "avatar": avatar_text_id, "nama": nama_id,
@@ -112,20 +135,27 @@ class LeaderboardView(tk.Frame):
 
     def pusatkan_koin_skor(self, canvas, koin_id, skor_id, center_x, y):
         canvas.update_idletasks()
-        lebar_koin = canvas.bbox(koin_id)[2] - canvas.bbox(koin_id)[0]
-        lebar_skor = canvas.bbox(skor_id)[2] - canvas.bbox(skor_id)[0]
+        bbox_koin = canvas.bbox(koin_id)
+        bbox_skor = canvas.bbox(skor_id)
+        lebar_koin = bbox_koin[2] - bbox_koin[0]
+        lebar_skor = bbox_skor[2] - bbox_skor[0]
         spasi = 5
         total = lebar_koin + spasi + lebar_skor
         mulai_x = center_x - total / 2
-        canvas.coords(koin_id, mulai_x, y - 7, mulai_x + lebar_koin, y + 7)
-        canvas.coords(skor_id, mulai_x + lebar_koin + spasi + lebar_skor / 2, y)
+
+        target_koin_cx = mulai_x + lebar_koin / 2
+        target_skor_cx = mulai_x + lebar_koin + spasi + lebar_skor / 2
+        cur_koin_cx = (bbox_koin[0] + bbox_koin[2]) / 2
+        cur_skor_cx = (bbox_skor[0] + bbox_skor[2]) / 2
+
+        canvas.move(koin_id, target_koin_cx - cur_koin_cx, 0)
+        canvas.move(skor_id, target_skor_cx - cur_skor_cx, 0)
 
     def build_list(self):
         container = tk.Frame(self, bg="white")
         container.pack(fill="both", expand=True, padx=15, pady=(0, 15))
 
         self.list_canvas = tk.Canvas(container, bg="white", highlightthickness=0)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.list_canvas.yview)
         self.list_frame = tk.Frame(self.list_canvas, bg="white")
 
         self.list_frame.bind("<Configure>", lambda e: self.list_canvas.configure(
@@ -133,10 +163,8 @@ class LeaderboardView(tk.Frame):
 
         window_id = self.list_canvas.create_window((0, 0), window=self.list_frame, anchor="nw")
         self.list_canvas.bind("<Configure>", lambda e: self.list_canvas.itemconfig(window_id, width=e.width))
-        self.list_canvas.configure(yscrollcommand=scrollbar.set)
 
         self.list_canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
 
         self.list_canvas.bind_all("<MouseWheel>", lambda e: self.list_canvas.yview_scroll(int(-e.delta / 120), "units"))
 
@@ -183,7 +211,7 @@ class LeaderboardView(tk.Frame):
 
         avatar = tk.Canvas(baris, width=32, height=32, bg=warna_bg, highlightthickness=0)
         avatar.grid(row=0, column=1, padx=8)
-        avatar.create_oval(1, 1, 31, 31, fill=warna_avatar, outline="")
+        gambar_hexagon(avatar, 16, 16, radius=15, fill=warna_avatar)
         avatar.create_text(16, 16, text=item["nama"][0].upper(), font=("Arial", 11, "bold"))
 
         nama_text = f"{item['nama']} (Anda)" if is_saya else item["nama"]
@@ -195,9 +223,9 @@ class LeaderboardView(tk.Frame):
         tk.Label(kanan, text=f"{item['skor']:,}".replace(",", "."), bg=warna_bg, fg=warna_text,
                  font=("Arial", 12, "bold")).pack(side="right", padx=(4, 0))
 
-        koin_canvas = tk.Canvas(kanan, width=16, height=16, bg=warna_bg, highlightthickness=0)
-        koin_canvas.pack(side="right")
-        gambar_koin(koin_canvas, 8, 8)
+        bintang_canvas = tk.Canvas(kanan, width=16, height=16, bg=warna_bg, highlightthickness=0)
+        bintang_canvas.pack(side="right")
+        gambar_bintang(bintang_canvas, 8, 8, radius=6)
 
         garis = tk.Frame(self.list_frame, bg="#F0F0F0", height=1)
         garis.grid(row=baris_ke, column=0, columnspan=4, sticky="sew")
