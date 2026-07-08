@@ -21,7 +21,7 @@ class SplashPage(tk.Frame):
             print("Gambar tidak ditemukan! Pastikan file gambar ada di folder yang sama dengan script python ini.")
 
         # Judul
-        self.canvas.create_text(200, 150, text="STRING SAVIOR", font=("Helvetica", 32, "bold"), fill="black")
+        self.canvas.create_text(200, 150, text="BYTA GAME", font=("Helvetica", 32, "bold"), fill="black")
         self.canvas.create_text(200, 190, text="WORD QUEST", font=("Helvetica", 18, "bold"), fill="black")
         self.canvas.create_text(200, 270, text="Satu huruf tepat, musuh sekarat.\nSatu tebakan melesat, nyawamu tamat!", 
                                 font=("Arial", 10), fill="black", justify="center")
