@@ -1,15 +1,11 @@
-import sys 
-import os 
-# SECTION 1: SYSTEM PATH & IMPORT MODULES
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))) 
-
 import tkinter as tk 
-from andre.database.koneksi import hubungkan_database 
+from database.koneksi import hubungkan_database 
 
 class Screen5PersiapanPerang(tk.Frame): 
-    def __init__(self, parent): 
+    def __init__(self, parent, controller): 
         super().__init__(parent, bg="white") 
-        self.parent = parent 
+        self.parent = parent
+        self.controller = controller
         self._cek_kesiapan_database() 
         # UI disiapkan terlebih dahulu, konten diisi secara dinamis via populate_data
         self.setup_ui() 
@@ -143,13 +139,13 @@ class Screen5PersiapanPerang(tk.Frame):
 
     def _action_mulai(self): 
         try: 
-            self.parent.switch_screen("game") 
+            self.controller.show_frame("") 
         except AttributeError: 
             print("[PREVIEW] Tombol 'MULAI PERTARUNGAN' Diklik -> Masuk ke Arena Play") 
 
     def _action_back(self): 
         try: 
-            self.parent.switch_screen("pilih_level") 
+            self.controller.show_frame("PilihLevelApp") 
         except AttributeError: 
             print("[PREVIEW] Tombol Back '←' Diklik -> Kembali ke Pilih Level") 
 

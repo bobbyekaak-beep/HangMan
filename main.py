@@ -1,78 +1,70 @@
-import customtkinter as ctk
-import importlib
+import tkinter as tk
+from screens.page_splash.splash_view import SplashPage
+from screens.page_login.login_view import LoginPage
+from screens.page_menu.menu_view import MenuPage
+from screens.page_pilih_level.pilih_level_view import PilihLevelApp
+from screens.page_toko.toko_view import MisiPemainBaruView
+from screens.page_papan_peringkat.papan_peringkat_view import LeaderboardView
+from screens.page_misi_pemain_baru.misi_pemain_baru_view import MisiHarianApp
+from screens.persiapan.persiapan import Screen5PersiapanPerang
+from screens.page_game.level1ui import Screen6Gameplay
+from screens.page_game.level2ui import Screen7GameplayLevel2
+from screens.page_game.level3ui import Screen8GameplayLevel3
+from screens.victory_menang.victory_menang import Screen9Victory
+from screens.game_over.game_over import Screen10GameOver
 
-ctk.set_appearance_mode("light")
-
-class HangmanGodzillaApp(ctk.CTk):
+DAFTAR_HALAMAN = [
+    SplashPage, LoginPage, MenuPage, PilihLevelApp, MisiPemainBaruView, LeaderboardView,
+    MisiHarianApp, Screen5PersiapanPerang, Screen6Gameplay, Screen7GameplayLevel2,
+    Screen8GameplayLevel3, Screen9Victory, Screen10GameOver
+    ]
+class HangmanApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Hangman Word Quest")
-        self.geometry("390x720")
-        self.resizable(False, False)
+        self.geometry("400x700") 
+        self.configure(bg="white")
+        self.resizable(False, False) # Kunci ukuran layar agar tidak berantakan
 
-        # === GLOBAL STATE GAME ===
-        self.player_name    = "PlayerOne"
-        self.koin           = 1250
-        self.level_terbuka  = 6
-        self.bintang_level  = {1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 0}
+        self.user_aktif = None
 
-        self.inventory = {
-            "💡 Petunjuk Huruf": 2,
-            "🕒 Tambah Waktu":   2,
-            "❤️ Pulihkan HP":    3,
-        }
+        self.container = tk.Frame(self, bg="white")
+        self.container.pack(fill="both", expand=True)
 
-        self.leaderboard_data = [
-            ("ApexPredator", 4500),
-            ("GojiraFans",   3800),
-            ("PlayerOne",    2450),
-            ("KingKong99",   2100),
-            ("KaijuHunter",  1500),
-        ]
+        self.frames = {}
+        
+        # Memasukkan semua halaman ke dalam memori aplikasi
+        for F in DAFTAR_HALAMAN:
+            page_name = F.__name__
+            frame = F(parent=self.container, controller=self)
+            self.frames[page_name] = frame
+            # Tumpuk semua halaman di titik yang sama
+            frame.grid(row=0, column=0, sticky="nsew")
 
-        # === DATA HASIL GAME — diisi gameplay, dibaca victory/gameover ===
-        self.hasil_terakhir = {
-            "kata":          "",
-            "skor":          0,
-            "sisa_waktu":    0,
-            "hp_player":     0,
-            "tebakan_benar": 0,
-            "tebakan_salah": 0,
-            "huruf_ditebak": set(),
-            "mode":          "victory",
-        }
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
 
-        self.current_frame = None
-        self.switch_screen("screen1_splash")
+        # Tampilkan splash screen saat pertama kali dibuka
+        self.show_frame("SplashPage")
 
-    # ── Dipanggil screen6_gameplay SEBELUM switch ke victory/gameover ──
-    def set_hasil_game(self, kata, skor, sisa_waktu,
-                       hp_player, tebakan_benar,
-                       tebakan_salah=0, huruf_ditebak=None,
-                       mode="victory"):
-        self.hasil_terakhir = {
-            "kata":          kata,
-            "skor":          skor,
-            "sisa_waktu":    sisa_waktu,
-            "hp_player":     hp_player,
-            "tebakan_benar": tebakan_benar,
-            "tebakan_salah": tebakan_salah,
-            "huruf_ditebak": huruf_ditebak if huruf_ditebak is not None else set(),
-            "mode":          mode,   # "victory" atau "defeat"
-        }
+    def show_frame(self, page_name, data=None):
+        frame = self.frames[page_name]
+        if data is not None and hasattr(frame, "populate_data"):
+            frame.populate_data(data)
+        frame.tkraise() # Angkat halaman yang dipilih ke urutan paling atas
 
-    def switch_screen(self, screen_name):
-        if self.current_frame is not None:
-            self.current_frame.destroy()
+    def set_hasil_game(self, **kwargs):
+        self.hasil_terakhir = kwargs
+        # Otomatis pindah ke halaman menang atau kalah sambil membawa data nilai
+        if kwargs.get("mode") == "victory":
+            self.show_frame("Screen9Victory", data=self.hasil_terakhir)
+        else:
+            self.show_frame("Screen10GameOver", data=self.hasil_terakhir)
 
-        module       = importlib.import_module(screen_name)
-        class_name   = "".join([w.capitalize() for w in screen_name.split("_")])
-        screen_class = getattr(module, class_name)
-
-        self.current_frame = screen_class(self)
-        self.current_frame.pack(fill="both", expand=True)
-
+    def go_back(self):
+        # Perintah ini akan membawa user kembali ke Menu Utama
+        self.show_frame("MenuPage")
 
 if __name__ == "__main__":
-    app = HangmanGodzillaApp()
+    app = HangmanApp()
     app.mainloop()
