@@ -1,20 +1,31 @@
 import tkinter as tk
 from tkinter import messagebox
+from PIL import Image, ImageTk
 
 class MenuPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="white")
         self.controller = controller
 
+        try:
+            gambar = Image.open("andre/assets/background.png") 
+            gambar = gambar.resize((400, 700), Image.Resampling.LANCZOS)
+            self.bg_image = ImageTk.PhotoImage(gambar)
+                    
+            bg_label = tk.Label(self, image=self.bg_image)
+            bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+        except FileNotFoundError:
+            print("Gambar background login tidak ditemukan!")
+
         # Header
         top_bar = tk.Frame(self, bg="white")
-        top_bar.pack(fill="x", padx=20, pady=20)
+        top_bar.pack(fill="x", ipady=10, pady=(0,20))
         
         self.label_pemain = tk.Label(top_bar, text="👤 Player", font=("Arial", 12, "bold"), bg="white")
-        self.label_pemain.pack(side="left")
+        self.label_pemain.pack(side="left", padx=20)
 
         frame_koin = tk.Frame(top_bar, bg="white")
-        frame_koin.pack(side="right")
+        frame_koin.pack(side="right", padx=20)
 
         self.label_koin = tk.Label(frame_koin, text="💰 0", font=("Arial", 12, "bold"), fg="#FF9800", bg="white")
         self.label_koin.pack(side="left", padx=(0, 5))

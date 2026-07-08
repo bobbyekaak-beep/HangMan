@@ -2,11 +2,22 @@ import tkinter as tk
 from tkinter import messagebox
 from database.koneksi import hubungkan_database
 import hashlib
+from PIL import Image, ImageTk
 
 class LoginPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="white")
         self.controller = controller
+
+        try:
+            gambar = Image.open("andre/assets/background.png") 
+            gambar = gambar.resize((400, 700), Image.Resampling.LANCZOS)
+            self.bg_image = ImageTk.PhotoImage(gambar)
+            
+            bg_label = tk.Label(self, image=self.bg_image)
+            bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+        except FileNotFoundError:
+            print("Gambar background login tidak ditemukan!")
 
         tk.Label(self, text="LOGIN ATAU DAFTAR", font=("Arial", 16, "bold"), bg="white").pack(pady=(40, 20))
 
@@ -39,7 +50,7 @@ class LoginPage(tk.Frame):
                   command=self.proses_daftar).pack(fill="x", padx=40, pady=5, ipady=5)
 
         # Tombol Kembali
-        tk.Button(self, text="← Kembali ke Awal", bg="white", bd=0, fg="#888",
+        tk.Button(self, text="← Kembali ke Awal", bg="white", bd=0, fg="red",
                   command=lambda: controller.show_frame("SplashPage")).pack(pady=30)
 
     def tampilkan_password(self, event):
