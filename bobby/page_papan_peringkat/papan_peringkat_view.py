@@ -1,7 +1,47 @@
 import tkinter as tk
 import math
+import mysql.connector
+import toko_view
+import misi_pemain_baru_view
 
+# koneksi ke database mysql/mariadb
+def buat_koneksi():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="db_hangman"
+    )
 
+# ambil data leaderboard, total koin tiap user dijumlahkan lalu diurutkan dari terbesar
+def ambil_data_leaderboard():
+    koneksi = buat_koneksi()
+    cursor = koneksi.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT users.id AS user_id, users.username AS nama,
+               COALESCE(SUM(scores.koin_didapat), 0) AS skor
+        FROM users
+        LEFT JOIN scores ON scores.user_id = users.id
+        GROUP BY users.id, users.username
+        ORDER BY skor DESC
+    """)
+    hasil = cursor.fetchall()
+    koneksi.close()
+    # kasih nomor ranking 1, 2, 3, dst
+    for i, baris in enumerate(hasil, start=1):
+        baris["rank"] = i
+    return hasil
+
+# ambil jumlah koin milik user yang sedang login
+def ambil_koin_user(user_id):
+    koneksi = buat_koneksi()
+    cursor = koneksi.cursor()
+    cursor.execute("SELECT coins FROM users WHERE id = %s", (user_id,))
+    baris = cursor.fetchone()
+    koneksi.close()
+    return baris[0] if baris else 0
+
+# fungsi bantu gambar kotak dengan sudut melengkung di canvas
 def rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
     points = [
         x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r,
@@ -10,15 +50,13 @@ def rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
     ]
     return canvas.create_polygon(points, smooth=True, **kwargs)
 
-
+# fungsi bantu gambar lingkaran koin
 def gambar_koin(canvas, x, y, radius=7):
-    """Gambar ikon koin bulat kuning di posisi (x, y), return id-nya untuk dipindah nanti."""
     return canvas.create_oval(x - radius, y - radius, x + radius, y + radius,
                                fill="#F2C94C", outline="#D4A62A", width=1)
 
-
+# fungsi bantu gambar bintang (dipakai buat icon skor)
 def gambar_bintang(canvas, x, y, radius=8, fill="#F2C94C", outline="#D4A62A"):
-    """Gambar ikon bintang di posisi (x, y), return id-nya untuk dipindah nanti."""
     points = []
     for i in range(10):
         sudut = math.pi / 2 + i * math.pi / 5
@@ -28,7 +66,7 @@ def gambar_bintang(canvas, x, y, radius=8, fill="#F2C94C", outline="#D4A62A"):
         points.extend([px, py])
     return canvas.create_polygon(points, fill=fill, outline=outline, width=1)
 
-
+# fungsi bantu gambar hexagon (dipakai buat bentuk avatar)
 def gambar_hexagon(canvas, cx, cy, radius, fill):
     points = []
     for i in range(6):
@@ -38,30 +76,49 @@ def gambar_hexagon(canvas, cx, cy, radius, fill):
         points.extend([px, py])
     return canvas.create_polygon(points, fill=fill, outline="")
 
-
+# daftar warna buat avatar user
 WARNA_AVATAR = ["#AED6F1", "#F5CBA7", "#A9DFBF", "#F5B7B1",
                 "#D7BDE2", "#F9E79F", "#A3E4D7", "#F7C9A9"]
 
-
+# pilih warna avatar berdasarkan huruf pertama nama
 def ambil_warna_avatar(nama):
     return WARNA_AVATAR[ord(nama[0].upper()) % len(WARNA_AVATAR)]
 
-
+# halaman/tampilan leaderboard
 class LeaderboardView(tk.Frame):
     def __init__(self, master, controller):
         super().__init__(master, bg="white")
         self.controller = controller
-        self.build_top_bar()
-        self.build_title()
-        self.build_podium()
-        self.build_list()
+        self.build_top_bar()   # bagian atas: tombol back & info koin
+        self.build_title()     # judul leaderboard
+        self.build_podium()    # podium juara 1, 2, 3
+        self.build_list()      # daftar ranking 4-10
+        self.muat_data()       # ambil data dari database dan tampilkan
+        self.mulai_auto_refresh()   # mulai auto-refresh data tiap beberapa menit
 
+    # ambil data terbaru lalu jadwalkan diri sendiri buat jalan lagi tiap 2 menit
+    def mulai_auto_refresh(self):
+        self.muat_data()
+        self.after(120000, self.mulai_auto_refresh)  # 120000 ms = 2 menit, ganti sesuai kebutuhan
+
+    # ambil data leaderboard & koin user, lalu tampilkan ke UI
+    def muat_data(self):
+        data = ambil_data_leaderboard()
+        koin_saya = ambil_koin_user(self.controller.user_id)
+        username_saya = ""
+        for baris in data:
+            if baris["user_id"] == self.controller.user_id:
+                username_saya = baris["nama"]
+        self.tampilkan_data(data, koin_saya, username_saya)
+
+    # bikin bagian atas halaman: tombol kembali, badge koin, tombol tambah koin (ke toko)
     def build_top_bar(self):
         top = tk.Frame(self, bg="white")
         top.pack(fill="x", padx=15, pady=(15, 0))
 
-        tk.Button(top, text="←", font=("Arial", 16, "bold"), bg="white",
-                  relief="flat", command=self.controller.go_back).pack(side="left")
+        tk.Button(top, text="←", font=("Arial", 16), bg="white", fg="#333333",
+                  bd=0, activebackground="white", activeforeground="#333333",
+                  command=self.controller.go_back).pack(side="left")
 
         right = tk.Frame(top, bg="white")
         right.pack(side="right")
@@ -73,7 +130,6 @@ class LeaderboardView(tk.Frame):
         self.coin_text_id = coin_badge.create_text(55, 12, text="0", font=("Arial", 12, "bold"))
         self.coin_badge = coin_badge
 
-        # tombol + pakai widget Button asli supaya benar-benar bisa dipencet dengan efek klik
         btn_frame = tk.Frame(right, width=20, height=20, bg="#27AE60")
         btn_frame.pack(side="left")
         btn_frame.pack_propagate(False)
@@ -84,10 +140,11 @@ class LeaderboardView(tk.Frame):
                       cursor="hand2", command=self.buka_toko)
         btn_plus.pack(fill="both", expand=True)
 
+    # pindah ke halaman toko
     def buka_toko(self):
-        # prototype: nanti diganti self.controller.show_frame("Toko")
-        print("Masuk ke halaman Toko")
+        self.controller.buka_toko()
 
+    # bikin judul "LEADERBOARD" beserta garis hiasan
     def build_title(self):
         tk.Label(self, text="LEADERBOARD", bg="white", fg="#1a1a2e",
                  font=("Arial", 20, "bold")).pack(pady=(10, 2))
@@ -98,6 +155,7 @@ class LeaderboardView(tk.Frame):
         deco.create_text(100, 8, text="★", fill="#E0B33A", font=("Arial", 10))
         deco.create_line(110, 8, 190, 8, fill="#E0B33A", dash=(3, 2))
 
+    # bikin 3 kartu podium buat rank 1, 2, 3
     def build_podium(self):
         podium = tk.Frame(self, bg="white")
         podium.pack(fill="x", padx=15, pady=15)
@@ -113,6 +171,7 @@ class LeaderboardView(tk.Frame):
         self.podium_1["canvas"].pack(side="left", expand=True, fill="both", padx=4)
         self.podium_3["canvas"].pack(side="left", expand=True, fill="both", padx=4)
 
+    # bikin satu kartu podium (canvas + avatar + nama + skor)
     def buat_kartu(self, parent, rank, bg, medali, avatar_bg, tinggi):
         lebar = 110
         canvas = tk.Canvas(parent, width=lebar, height=tinggi + 20, bg="white", highlightthickness=0)
@@ -126,13 +185,13 @@ class LeaderboardView(tk.Frame):
 
         nama_id = canvas.create_text(lebar / 2, 125, text="-", font=("Arial", 12, "bold"))
 
-        # bintang dan skor diposisikan tengah ulang setelah teks diisi (lihat pusatkan_koin_skor)
         koin_id = gambar_bintang(canvas, lebar / 2, 150, radius=9)
         skor_id = canvas.create_text(lebar / 2, 150, text="0", font=("Arial", 11))
 
         return {"canvas": canvas, "avatar": avatar_text_id, "nama": nama_id,
                 "skor": skor_id, "koin": koin_id, "center_x": lebar / 2, "y_skor": 150}
 
+    # geser posisi icon bintang & teks skor biar rapi di tengah
     def pusatkan_koin_skor(self, canvas, koin_id, skor_id, center_x, y):
         canvas.update_idletasks()
         bbox_koin = canvas.bbox(koin_id)
@@ -151,29 +210,16 @@ class LeaderboardView(tk.Frame):
         canvas.move(koin_id, target_koin_cx - cur_koin_cx, 0)
         canvas.move(skor_id, target_skor_cx - cur_skor_cx, 0)
 
+    # siapkan container kosong buat daftar ranking 4 ke bawah
     def build_list(self):
         container = tk.Frame(self, bg="white")
         container.pack(fill="both", expand=True, padx=15, pady=(0, 15))
 
-        self.list_canvas = tk.Canvas(container, bg="white", highlightthickness=0)
-        self.list_frame = tk.Frame(self.list_canvas, bg="white")
+        self.list_frame = tk.Frame(container, bg="white")
+        self.list_frame.pack(fill="both", expand=True)
 
-        self.list_frame.bind("<Configure>", lambda e: self.list_canvas.configure(
-            scrollregion=self.list_canvas.bbox("all")))
-
-        window_id = self.list_canvas.create_window((0, 0), window=self.list_frame, anchor="nw")
-        self.list_canvas.bind("<Configure>", lambda e: self.list_canvas.itemconfig(window_id, width=e.width))
-
-        self.list_canvas.pack(side="left", fill="both", expand=True)
-
-        self.list_canvas.bind_all("<MouseWheel>", lambda e: self.list_canvas.yview_scroll(int(-e.delta / 120), "units"))
-
+    # isi data ke tampilan: update podium 1-3 dan render list ranking 4-10
     def tampilkan_data(self, data_leaderboard, koin_saya, username_saya):
-        """
-        data_leaderboard: list of dict dari database, contoh:
-        [{"rank": 1, "nama": "PlayerOne", "skor": 2450}, ...]
-        Panggil fungsi ini setelah data diambil dari database.
-        """
         self.coin_badge.itemconfig(self.coin_text_id, text=f"{koin_saya:,}".replace(",", "."))
 
         podium_map = {1: self.podium_1, 2: self.podium_2, 3: self.podium_3}
@@ -186,40 +232,44 @@ class LeaderboardView(tk.Frame):
                 canvas.itemconfig(p["skor"], text=f"{item['skor']:,}".replace(",", "."))
                 self.pusatkan_koin_skor(canvas, p["koin"], p["skor"], p["center_x"], p["y_skor"])
 
+        # bersihkan list lama sebelum render ulang
         for widget in self.list_frame.winfo_children():
             widget.destroy()
 
         self.list_frame.columnconfigure(2, weight=1)
 
+        # cuma tampilkan rank 4 sampai 10 di list bawah podium
         baris_ke = 0
         for item in data_leaderboard:
-            if item["rank"] > 3:
+            if 3 < item["rank"] <= 10:
                 self.buat_baris_list(item, baris_ke, is_saya=(item["nama"] == username_saya))
                 baris_ke += 1
 
+    # bikin satu baris di daftar ranking (nomor, avatar, nama, skor)
     def buat_baris_list(self, item, baris_ke, is_saya=False):
         warna_bg = "#E8F8ED" if is_saya else "white"
         warna_text = "#219653" if is_saya else "#1a1a2e"
         warna_avatar = ambil_warna_avatar(item["nama"])
 
         baris = tk.Frame(self.list_frame, bg=warna_bg)
-        baris.grid(row=baris_ke, column=0, columnspan=4, sticky="ew", pady=2)
+        baris.grid(row=baris_ke, column=0, columnspan=4, sticky="ew", pady=1)
         baris.columnconfigure(2, weight=1)
 
         tk.Label(baris, text=str(item["rank"]), bg=warna_bg, fg=warna_text,
-                 font=("Arial", 12, "bold"), width=3).grid(row=0, column=0, padx=(10, 5), pady=10)
+                 font=("Arial", 12, "bold"), width=3).grid(row=0, column=0, padx=(10, 5), pady=3)
 
-        avatar = tk.Canvas(baris, width=32, height=32, bg=warna_bg, highlightthickness=0)
-        avatar.grid(row=0, column=1, padx=8)
-        gambar_hexagon(avatar, 16, 16, radius=15, fill=warna_avatar)
-        avatar.create_text(16, 16, text=item["nama"][0].upper(), font=("Arial", 11, "bold"))
+        avatar = tk.Canvas(baris, width=28, height=28, bg=warna_bg, highlightthickness=0)
+        avatar.grid(row=0, column=1, padx=8, pady=3)
+        gambar_hexagon(avatar, 14, 14, radius=13, fill=warna_avatar)
+        avatar.create_text(14, 14, text=item["nama"][0].upper(), font=("Arial", 10, "bold"))
 
+        # kasih label "(Anda)" kalau ini baris user yang sedang login
         nama_text = f"{item['nama']} (Anda)" if is_saya else item["nama"]
         tk.Label(baris, text=nama_text, bg=warna_bg, fg=warna_text,
-                 font=("Arial", 12, "bold"), anchor="w").grid(row=0, column=2, sticky="w", padx=8)
+                 font=("Arial", 12, "bold"), anchor="w").grid(row=0, column=2, sticky="w", padx=8, pady=3)
 
         kanan = tk.Frame(baris, bg=warna_bg)
-        kanan.grid(row=0, column=3, sticky="e", padx=15)
+        kanan.grid(row=0, column=3, sticky="e", padx=12, pady=3)
         tk.Label(kanan, text=f"{item['skor']:,}".replace(",", "."), bg=warna_bg, fg=warna_text,
                  font=("Arial", 12, "bold")).pack(side="right", padx=(4, 0))
 
@@ -227,36 +277,57 @@ class LeaderboardView(tk.Frame):
         bintang_canvas.pack(side="right")
         gambar_bintang(bintang_canvas, 8, 8, radius=6)
 
+        # garis pemisah antar baris
         garis = tk.Frame(self.list_frame, bg="#F0F0F0", height=1)
         garis.grid(row=baris_ke, column=0, columnspan=4, sticky="sew")
 
 
+# class utama aplikasi, mengatur perpindahan antar halaman (leaderboard, toko, misi)
 class App(tk.Tk):
-    def __init__(self):
+    def __init__(self, user_id):
         super().__init__()
-        self.geometry("420x750")
-        self.frame = LeaderboardView(self, self)
-        self.frame.pack(fill="both", expand=True)
+        self.geometry("400x700")
+        self.user_id = user_id
 
+        self.container = tk.Frame(self)
+        self.container.pack(fill="both", expand=True)
+
+        # semua halaman ditumpuk pakai place(), lalu ditampilkan pakai tkraise()
+        self.leaderboard_frame = LeaderboardView(self.container, self)
+        self.toko_frame = toko_view.MisiPemainBaruView(self.container, self)
+        self.misi_frame = misi_pemain_baru_view.MisiPemainBaruView(self.container, self)
+
+        self.leaderboard_frame.place(relwidth=1, relheight=1)
+        self.toko_frame.place(relwidth=1, relheight=1)
+        self.misi_frame.place(relwidth=1, relheight=1)
+
+        self.frame = self.leaderboard_frame
+        self.riwayat_halaman = []  # buat nyimpen histori halaman biar bisa "go back"
+        self.halaman_sekarang = self.leaderboard_frame
+        self.leaderboard_frame.tkraise()
+
+    # pindah ke halaman toko, simpan halaman sebelumnya ke riwayat
+    def buka_toko(self):
+        self.riwayat_halaman.append(self.halaman_sekarang)
+        self.halaman_sekarang = self.toko_frame
+        self.toko_frame.tkraise()
+
+    # pindah ke halaman misi harian, simpan halaman sebelumnya ke riwayat
+    def buka_misi(self):
+        self.riwayat_halaman.append(self.halaman_sekarang)
+        self.halaman_sekarang = self.misi_frame
+        self.misi_frame.tkraise()
+
+    # kembali ke halaman sebelumnya berdasarkan riwayat
     def go_back(self):
-        print("Kembali ke halaman sebelumnya")
+        if self.riwayat_halaman:
+            self.halaman_sekarang = self.riwayat_halaman.pop()
+        else:
+            self.halaman_sekarang = self.leaderboard_frame
+        self.halaman_sekarang.tkraise()
 
 
+# jalankan aplikasi, mulai dari halaman leaderboard
 if __name__ == "__main__":
-    app = App()
-
-    data_dummy = [
-        {"rank": 1, "nama": "PlayerOne", "skor": 2450},
-        {"rank": 2, "nama": "LexiQuiz", "skor": 2120},
-        {"rank": 3, "nama": "ThinkFast", "skor": 1980},
-        {"rank": 4, "nama": "AlphaBrain", "skor": 1750},
-        {"rank": 5, "nama": "Bobby", "skor": 1250},
-        {"rank": 6, "nama": "WordMaster", "skor": 1120},
-        {"rank": 7, "nama": "BrainyBoy", "skor": 980},
-        {"rank": 8, "nama": "PuzzleQueen", "skor": 820},
-        {"rank": 9, "nama": "WordHunter", "skor": 750},
-        {"rank": 10, "nama": "HangPro", "skor": 620},
-    ]
-    app.frame.tampilkan_data(data_dummy, koin_saya=1250, username_saya="Bobby")
-
+    app = App(user_id=4)
     app.mainloop()
