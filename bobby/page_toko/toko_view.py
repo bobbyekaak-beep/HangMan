@@ -350,15 +350,14 @@ class MisiPemainBaruView(tk.Frame):
 
 # blok testing mandiri: jalankan file ini langsung untuk preview TokoView tanpa lewat App utama
 if __name__ == "__main__":
-    import misi_pemain_baru_view
+    from bobby.page_misi_pemain_baru import misi_pemain_baru_view
 
-    # controller tiruan buat simulasi navigasi antar frame saat testing
     class DummyController:
         def __init__(self, container):
             self.container = container
             self.user_id = 4
             self.toko_frame = MisiPemainBaruView(container, self)
-            self.misi_frame = misi_pemain_baru_view.MisiHarianView(container, self)
+            self.misi_frame = misi_pemain_baru_view.MisiPemainBaruView(container, self)
             self.toko_frame.place(relwidth=1, relheight=1)
             self.misi_frame.place(relwidth=1, relheight=1)
             self.toko_frame.tkraise()
