@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 import random
 import winsound
-from level1logic import HangmanLogic
+from logic import level1logic
 
 class Screen6Gameplay(tk.Frame):
     def __init__(self, parent):
@@ -11,7 +11,7 @@ class Screen6Gameplay(tk.Frame):
         self.parent = parent
         
         # Inisialisasi object logic game
-        self.logic = HangmanLogic()
+        self.logic = level1logic()
 
         self.style = ttk.Style()
         self.style.theme_use('default')

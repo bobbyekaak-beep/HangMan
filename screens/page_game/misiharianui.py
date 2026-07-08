@@ -1,7 +1,7 @@
 import tkinter as tk
 import random
 import winsound
-from misiharianlogic import DailyMissionLogic
+from logic import misiharianlogic
 
 class ScreenDailyMission(tk.Frame):
     def __init__(self, parent):
@@ -9,7 +9,7 @@ class ScreenDailyMission(tk.Frame):
         self.parent = parent
         
         # Inisialisasi logika permainan dengan menghubungkan ke fungsi UI (Callback)
-        self.logic = DailyMissionLogic(
+        self.logic = misiharianlogic(
             on_timer_update=self.ui_update_timer,
             on_banner_update=self._set_banner,
             on_game_over=self.ui_game_over,
