@@ -1,14 +1,12 @@
 import tkinter as tk
 from tkinter import messagebox
 
-class MisiHarianApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Misi Harian")
-        self.geometry("400x700")
-        self.configure(bg="white")
+class MisiHarianApp(tk.Frame):
+    def __init__(self, parent, controller): 
+        super().__init__(parent, bg="white") 
+        self.controller = controller
 
-        self.coins = 1250
+        self.coins = 0
         self.total_misi = 7        # jumlah misi utama yang dihitung untuk progress harian & bonus
         self.bonus_reward = 150
         self.bonus_diambil = False
@@ -41,8 +39,13 @@ class MisiHarianApp(tk.Tk):
 
         self.refresh_ui()
 
-    # HEADER 
+    def populate_data(self, data=None):
+        user_id = self.controller.user_aktif["id"]
+        self.coins = ambil_koin_dari_db(user_id) 
+        self.coin_lbl.configure(text=self.format_koin())
+        self.refresh_ui()
 
+    # HEADER 
     def _buat_header(self):
         # Pakai grid 3 kolom (kiri - tengah - kanan) supaya judul presisi di tengah
         # walaupun lebar tombol kembali dan frame koin berbeda

@@ -1,15 +1,11 @@
-import sys 
-import os 
-# SECTION 1: SYSTEM PATH & IMPORT MODULES # Menyelaraskan jalur folder agar Python bisa mendeteksi modul di luar folder lokal 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))) 
-
 import tkinter as tk 
-from andre.database.koneksi import hubungkan_database 
+from database.koneksi import hubungkan_database 
 
 class Screen9Victory(tk.Frame): 
-    def __init__(self, parent): 
+    def __init__(self, parent, controller): 
         super().__init__(parent, bg="white") 
         self.parent = parent 
+        self.controller = controller
 
     def populate_data(self, data): 
         # Bersihkan widget lama jika fungsi dipanggil ulang agar tidak menumpuk 

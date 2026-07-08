@@ -48,8 +48,8 @@ def ambil_warna_avatar(nama):
 
 
 class LeaderboardView(tk.Frame):
-    def __init__(self, master, controller):
-        super().__init__(master, bg="white")
+    def __init__(self, parent, controller): 
+        super().__init__(parent, bg="white")
         self.controller = controller
         self.build_top_bar()
         self.build_title()

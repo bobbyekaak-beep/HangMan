@@ -2,15 +2,16 @@ import tkinter as tk
 from tkinter import ttk
 import random
 import winsound
-from logic import level2logic  # Import bagian logic
+from logic.page_game.level2logic import Level2Logic  # Import bagian logic
 
 class Screen7GameplayLevel2(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, controller):
         super().__init__(parent, bg="#111827")
         self.parent = parent
+        self.controller = controller
         
         # Inisialisasi Logic core
-        self.logic = level2logic()
+        self.logic = Level2Logic()
 
         # Konfigurasi Progress Bar
         self.style = ttk.Style()
@@ -219,7 +220,7 @@ class Screen7GameplayLevel2(tk.Frame):
                         kata=", ".join(self.logic.daftar_kata), skor=skor, sisa_waktu=self.logic.sisa_waktu, hp_player=self.logic.hp_player,
                         tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, huruf_ditebak=set(), mode="victory"
                     )
-                self.after(1200, lambda: self.parent.switch_screen("screenresult.py"))
+                self.after(1200, lambda: self.controller.show_frame("Screen9Victory"))
 
         elif self.logic.hp_player <= 0 or self.logic.sisa_waktu <= 0:
             self.logic.game_selesai = True
@@ -233,7 +234,7 @@ class Screen7GameplayLevel2(tk.Frame):
                     kata=self.logic.kata_rahasia, skor=0, sisa_waktu=0, hp_player=0,
                     tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, huruf_ditebak=set(), mode="defeat"
                 )
-            self.after(1200, lambda: self.parent.switch_screen("screenresult.py"))
+            self.after(1200, lambda: self.parent.switch_screen("Screen10GameOver"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()

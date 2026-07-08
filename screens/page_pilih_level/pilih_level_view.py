@@ -21,12 +21,10 @@ def ambil_bintang_level():
     return {}
 
 
-class PilihLevelApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Hangman Word Quest - Pilih Level")
-        self.geometry("400x700")
-        self.configure(bg="white")
+class PilihLevelApp(tk.Frame):
+    def __init__(self, parent, controller): 
+        super().__init__(parent, bg="white")
+        self.controller = controller
 
         self.level_selesai = ambil_data_progres()
         self.level_bintang = ambil_bintang_level()
@@ -127,6 +125,7 @@ class PilihLevelApp(tk.Tk):
 
     def mulai_level(self, level):
         self.label_status.config(text=f"Level {level} dipilih, memuat permainan...")
+        self.controller.show_frame("Screen5PersiapanPerang", data={"level": level})
 
 
 if __name__ == "__main__":

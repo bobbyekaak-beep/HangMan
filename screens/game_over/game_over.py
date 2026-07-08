@@ -1,17 +1,11 @@
-import sys 
-import os 
-
-# SECTION 1: SYSTEM PATH & IMPORT MODULES
-# Menambahkan folder utama HangMan ke dalam jalur pencarian Python
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))) 
-
 import tkinter as tk 
-from andre.database.koneksi import hubungkan_database 
+from database.koneksi import hubungkan_database 
 
 class Screen10GameOver(tk.Frame): 
-    def __init__(self, parent): 
+    def __init__(self, parent, controller): 
         super().__init__(parent, bg="white") 
         self.parent = parent 
+        self.controller = controller
 
     def populate_data(self, data): 
         # Bersihkan widget lama jika fungsi dipanggil ulang agar tidak menumpuk
@@ -88,13 +82,13 @@ class Screen10GameOver(tk.Frame):
     
     def _action_coba_lagi(self): 
         try: 
-            self.parent.switch_screen("game") 
+            self.controller.show_frame("Screen5PersiapanPerang") 
         except AttributeError: 
             print("[PREVIEW] Tombol Coba Lagi Diklik") 
 
     def _action_menu(self): 
         try: 
-            self.parent.switch_screen("menu") 
+            self.controller.show_frame("MenuPage") 
         except AttributeError: 
             print("[PREVIEW] Tombol Kembali ke Menu Diklik") 
 
@@ -127,7 +121,7 @@ class Screen10GameOver(tk.Frame):
                     if waktu_bermain < 0 or waktu_bermain > 90: 
                         waktu_bermain = 90
                         
-                    cursor.execute(query_score, (user_id, level, waktu_bermain, 'LOSE', kata, sisa_waktu, hp, benar, salah, koin))
+                    cursor.execute(query_score, (user_id, level, waktu_bermain, 'GAME OVER', kata, sisa_waktu, hp, benar, salah, koin))
                     db_koneksi.commit() 
                     print(f"[DATABASE] Sukses mencatat data LOSE & menambah +{koin} koin hiburan untuk user '{username}' (ID: {user_id})!") 
                 else:

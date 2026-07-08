@@ -8,7 +8,7 @@ class MenuPage(tk.Frame):
         self.controller = controller
 
         try:
-            gambar = Image.open("andre/assets/background.png") 
+            gambar = Image.open("assets/background.png") 
             gambar = gambar.resize((400, 700), Image.Resampling.LANCZOS)
             self.bg_image = ImageTk.PhotoImage(gambar)
                     
@@ -31,23 +31,23 @@ class MenuPage(tk.Frame):
         self.label_koin.pack(side="left", padx=(0, 5))
 
         tk.Button(frame_koin, text=" ➕ ", bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), bd=0,
-                  command=lambda: self.belum_tersedia("Toko")).pack(side="left")
+                  command=lambda: controller.show_frame("MisiPemainBaruView")).pack(side="left")
         
         # Kumpulan Tombol Menu yang sudah dipindah dari depan
         tk.Button(self, text="MULAI PERMAINAN", bg="#4CAF50", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=self.belum_tersedia).pack(pady=8)
+                  width=25, height=2, bd=0, command=lambda: controller.show_frame("Screen5PersiapanPerang")).pack(pady=8)
                   
         tk.Button(self, text="PILIH LEVEL", bg="#2196F3", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=self.belum_tersedia).pack(pady=8)
+                  width=25, height=2, bd=0, command=lambda: controller.show_frame("PilihLevelApp")).pack(pady=8)
                   
         tk.Button(self, text="TOKO", bg="#FF9800", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=self.belum_tersedia).pack(pady=8)
+                  width=25, height=2, bd=0, command=lambda: controller.show_frame("MisiPemainBaruView")).pack(pady=8)
                   
-        tk.Button(self, text="ITEM SAYA", bg="#757575", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=self.belum_tersedia).pack(pady=8)
+        tk.Button(self, text="MISI HARIAN", bg="#757575", fg="white", font=("Arial", 12, "bold"),
+                  width=25, height=2, bd=0, command=lambda: controller.show_frame("MisiHarianApp")).pack(pady=8)
                   
         tk.Button(self, text="PAPAN PERINGKAT", bg="#FF9800", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=self.belum_tersedia).pack(pady=8)
+                  width=25, height=2, bd=0, command=lambda: controller.show_frame("LeaderboardView")).pack(pady=8)
 
         # Tombol Keluar
         tk.Button(self, text="KELUAR (LOGOUT)", bg="#F44336", fg="white", font=("Arial", 12, "bold"),

@@ -10,7 +10,7 @@ class LoginPage(tk.Frame):
         self.controller = controller
 
         try:
-            gambar = Image.open("andre/assets/background.png") 
+            gambar = Image.open("assets/background.png") 
             gambar = gambar.resize((400, 700), Image.Resampling.LANCZOS)
             self.bg_image = ImageTk.PhotoImage(gambar)
             

@@ -3,15 +3,16 @@ import tkinter as tk
 from tkinter import ttk
 import random
 import winsound
-from logic import level1logic
+from logic.page_game.level1logic import HangmanLogic
 
 class Screen6Gameplay(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, controller):
         super().__init__(parent, bg="#0F172A")
         self.parent = parent
+        self.controller = controller
         
         # Inisialisasi object logic game
-        self.logic = level1logic()
+        self.logic = HangmanLogic()
 
         self.style = ttk.Style()
         self.style.theme_use('default')
@@ -206,7 +207,7 @@ class Screen6Gameplay(tk.Frame):
                 tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah,
                 huruf_ditebak=set(), mode=mode
             )
-        self.after(1200, lambda: self.parent.switch_screen("screenresult.py"))
+        self.after(1200, lambda: self.parent.controller.show_frame("Screen9Victory"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()

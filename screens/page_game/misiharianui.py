@@ -4,9 +4,10 @@ import winsound
 from logic import misiharianlogic
 
 class ScreenDailyMission(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, controller):
         super().__init__(parent, bg="#111827")
         self.parent = parent
+        self.controller = controller
         
         # Inisialisasi logika permainan dengan menghubungkan ke fungsi UI (Callback)
         self.logic = misiharianlogic(

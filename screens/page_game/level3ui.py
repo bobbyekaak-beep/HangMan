@@ -3,15 +3,16 @@ import tkinter as tk
 from tkinter import ttk
 import random
 import winsound
-from logic import level3logic  # Import kelas logika
+from logic.page_game.level3logic import Level3Logic  # Import kelas logika
 
 class Screen8GameplayLevel3(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, controller):
         super().__init__(parent, bg="#111827")
         self.parent = parent
+        self.controller = controller
         
         # Inisialisasi logika game
-        self.logic = level3logic()
+        self.logic = Level3Logic()
 
         self.style = ttk.Style()
         self.style.theme_use('default')
@@ -234,7 +235,7 @@ class Screen8GameplayLevel3(tk.Frame):
                 tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, 
                 huruf_ditebak=set(), mode=mode
             )
-        self.after(1200, lambda: self.parent.switch_screen("screenresult.py"))
+        self.after(1200, lambda: self.parent.controller.show_frame("Screen9Victory"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()

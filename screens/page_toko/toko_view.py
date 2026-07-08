@@ -88,15 +88,15 @@ def beli_paket_hemat_db(user_id, harga, item_ids):
 
 # Frame utama halaman Toko (dipakai dalam sistem navigasi frame-stacking)
 class MisiPemainBaruView(tk.Frame):
-    def __init__(self, master, controller):
-        super().__init__(master, bg="white")
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg="white")
         self.controller = controller
-
+        
         # state halaman: TOKO atau ITEM SAYA, serta kategori yang lagi difilter
         self.current_page = "TOKO"
         self.selected_category = "SEMUA"
-        self.coins = ambil_koin_user(self.controller.user_id)
-        self.db_items = ambil_semua_item(self.controller.user_id)
+        self.coins = 0
+        self.db_items = []
 
         # header atas: tombol kembali, tampilan koin, tombol misi harian
         self.header_frame = tk.Frame(self, bg="white")
@@ -178,6 +178,13 @@ class MisiPemainBaruView(tk.Frame):
 
         # render tampilan awal
         self.refresh_ui()
+
+    def populate_data(self, data=None):
+        if self.controller.user_aktif:
+            self.coins = ambil_koin_user(self.controller.user_aktif["id"])
+            self.refresh_tampilan_koin()
+            self.db_items = ambil_semua_item(self.controller.user_aktif["id"])
+            self.refresh_ui()
 
     # ganti halaman aktif (TOKO / ITEM SAYA) lalu render ulang
     def switch_page(self, page_name):
