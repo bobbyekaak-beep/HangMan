@@ -1,3 +1,4 @@
+from os import name
 import tkinter as tk
 from tkinter import messagebox
 import mysql.connector
@@ -162,18 +163,17 @@ class TokoView(tk.Frame):
 
         self.refresh_ui()
 
+    def tkraise(self, aboveThis=None):
+        super().tkraise(aboveThis)
+        self.populate_data()
+        self.refresh_ui()
+
     def populate_data(self, data=None):
-        # Pastikan ada user yang sudah login
         if self.controller.user_aktif:
-            # Gunakan user_aktif["id"], bukan user_id
             user_id = self.controller.user_aktif["id"]
-            
-            # Ambil koin dari database
             self.coins = ambil_koin_user(user_id)
-            
-            # Refresh tampilan angka koin di layar toko (sesuaikan nama label koinmu)
-            if hasattr(self, 'lbl_koin'): 
-                self.lbl_koin.configure(text=str(self.coins))
+            self.db_items = ambil_semua_item(user_id)
+            self.coin_lbl.configure(text=self.format_koin())
 
     def switch_page(self, page_name):
         self.current_page = page_name
@@ -325,23 +325,22 @@ class TokoView(tk.Frame):
 
 
 if __name__ == "__main__":
-    import page_misi_pemain_baru
 
     class DummyController:
         def __init__(self, container):
             self.container = container
-            self.user_id = 4
+            self.user_aktif = {"id": 4, "username": "test", "coins": 0}
             self.toko_frame = TokoView(container, self)
-            self.misi_frame = page_misi_pemain_baru.MisiHarianApp(container, self)
             self.toko_frame.place(relwidth=1, relheight=1)
-            self.misi_frame.place(relwidth=1, relheight=1)
+            self.toko_frame.populate_data()
+            self.toko_frame.refresh_ui()
             self.toko_frame.tkraise()
 
         def go_back(self):
             self.toko_frame.tkraise()
 
         def buka_misi(self):
-            self.misi_frame.tkraise()
+            messagebox.showinfo("Info", "Testing mandiri, halaman misi belum terhubung.")
 
     root = tk.Tk()
     root.geometry("400x700")
