@@ -66,6 +66,9 @@ class HangmanApp(tk.Tk):
         # Perintah ini akan membawa user kembali ke Menu Utama
         self.show_frame("MenuPage")
 
+    def buka_misi(self):
+        self.show_frame("MisiHarianApp")
+
 if __name__ == "__main__":
     app = HangmanApp()
     app.mainloop()
