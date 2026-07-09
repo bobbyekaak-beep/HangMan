@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import random
 import winsound
-from logic.page_game.level2logic import Level2Logic  # Import bagian logic
+from logic.page_game.level2logic import Level2Logic
 
 class Screen7GameplayLevel2(tk.Frame):
     def __init__(self, parent, controller):
@@ -10,10 +10,8 @@ class Screen7GameplayLevel2(tk.Frame):
         self.parent = parent
         self.controller = controller
         
-        # Inisialisasi Logic core
         self.logic = Level2Logic()
 
-        # Konfigurasi Progress Bar
         self.style = ttk.Style()
         self.style.theme_use('default')
         self.style.configure("Player.Horizontal.TProgressbar", 
@@ -26,7 +24,6 @@ class Screen7GameplayLevel2(tk.Frame):
         self.update_timer()
 
     def setup_ui(self):
-        # ── 1. TOP HUD ───────────────────────────────────────────
         hud = tk.Frame(self, bg="#111827")
         hud.pack(fill="x", padx=14, pady=(14, 6))
 
@@ -56,7 +53,6 @@ class Screen7GameplayLevel2(tk.Frame):
         self.lbl_hp_g = tk.Label(kanan, bg="#111827", text=f"{int(self.logic.hp_musuh)}/{self.logic.hp_musuh_max}", font=("Arial", 9, "bold"), fg="#EF4444")
         self.lbl_hp_g.pack(anchor="e")
 
-        # ── 2. STATUS BANNER ─────────────────────────────────────
         self.status_banner = tk.Frame(self, bg="#FF6B00", height=32) 
         self.status_banner.pack(fill="x", padx=14, pady=(6, 4))
         self.status_banner.pack_propagate(False)
@@ -64,7 +60,6 @@ class Screen7GameplayLevel2(tk.Frame):
         self.lbl_status = tk.Label(self.status_banner, bg="#FF6B00", text="⚠️ MEMASUKI LEVEL 2: MODE HARD ⚠️", font=("Arial", 10, "bold"), fg="white")
         self.lbl_status.pack(expand=True)
 
-        # ── 3. INFO LEVEL & KATEGORI ──────────────────────────────
         info_frame = tk.Frame(self, bg="#1F2937", highlightbackground="#374151", highlightthickness=1)
         info_frame.pack(fill="x", padx=14, pady=4)
 
@@ -72,20 +67,16 @@ class Screen7GameplayLevel2(tk.Frame):
         self.lbl_level.pack(pady=(6, 0))
         tk.Label(info_frame, text="Kategori: Hewan Menengah", bg="#1F2937", font=("Arial", 10), fg="#9CA3AF").pack(pady=(0, 6))
 
-        # ── 4. SLOT KATA RAHASIA ──────────────────────────────────
         self.word_frame = tk.Frame(self, bg="#111827")
         self.word_frame.pack(pady=16)
 
-        # ── 5. KETERANGAN HURUF DITEBAK ──────────────────────────
         self.lbl_ditebak = tk.Label(self, bg="#111827", text="Huruf sudah ditebak: -", font=("Arial", 9), fg="#6B7280")
         self.lbl_ditebak.pack()
 
-        # ── 6. KEYBOARD A–Z ───────────────────────────────────────
         self.kb_frame = tk.Frame(self, bg="#111827")
         self.kb_frame.pack(pady=12)
         self.build_keyboard()
 
-        # ── 7. ITEM BAR BAWAH ─────────────────────────────────────
         self.item_bar = tk.Frame(self, bg="#1F2937", highlightbackground="#374151", highlightthickness=1, height=75)
         self.item_bar.pack(side="bottom", fill="x", padx=14, pady=14)
         self.item_bar.pack_propagate(False)
@@ -215,8 +206,8 @@ class Screen7GameplayLevel2(tk.Frame):
                 self.after(250, lambda: winsound.Beep(1600, 300))
 
                 skor = self.logic.hitung_skor()
-                if hasattr(self.parent, "set_hasil_game"):
-                    self.parent.set_hasil_game(
+                if hasattr(self.controller, "set_hasil_game"):
+                    self.controller.set_hasil_game(
                         kata=", ".join(self.logic.daftar_kata), skor=skor, sisa_waktu=self.logic.sisa_waktu, hp_player=self.logic.hp_player,
                         tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, huruf_ditebak=set(), mode="victory"
                     )
@@ -229,12 +220,12 @@ class Screen7GameplayLevel2(tk.Frame):
             self.after(100, lambda: winsound.Beep(400, 200))
             self.after(320, lambda: winsound.Beep(250, 400))
 
-            if hasattr(self.parent, "set_hasil_game"):
-                self.parent.set_hasil_game(
+            if hasattr(self.controller, "set_hasil_game"):
+                self.controller.set_hasil_game(
                     kata=self.logic.kata_rahasia, skor=0, sisa_waktu=0, hp_player=0,
                     tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, huruf_ditebak=set(), mode="defeat"
                 )
-            self.after(1200, lambda: self.parent.switch_screen("Screen10GameOver"))
+            self.after(1200, lambda: self.controller.show_frame("Screen10GameOver"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()
@@ -303,7 +294,6 @@ class Screen7GameplayLevel2(tk.Frame):
         else:
             self.cek_kondisi()
 
-# ── RUN MOCK TEST ─────────────────
 if __name__ == "__main__":
     class MockParent(tk.Tk):
         def __init__(self):

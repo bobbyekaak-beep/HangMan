@@ -235,7 +235,7 @@ class Screen8GameplayLevel3(tk.Frame):
                 tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, 
                 huruf_ditebak=set(), mode=mode
             )
-        self.after(1200, lambda: self.parent.controller.show_frame("Screen9Victory"))
+        self.after(1200, command=lambda: self.parent.controller.show_frame("Screen9Victory"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()

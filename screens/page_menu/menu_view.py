@@ -31,7 +31,7 @@ class MenuPage(tk.Frame):
         self.label_koin.pack(side="left", padx=(0, 5))
 
         tk.Button(frame_koin, text=" ➕ ", bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), bd=0,
-                  command=lambda: controller.show_frame("MisiPemainBaruView")).pack(side="left")
+                  command=lambda: controller.show_frame("TokoView")).pack(side="left")
         
         # Kumpulan Tombol Menu yang sudah dipindah dari depan
         tk.Button(self, text="MULAI PERMAINAN", bg="#4CAF50", fg="white", font=("Arial", 12, "bold"),

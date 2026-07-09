@@ -85,7 +85,7 @@ class LeaderboardView(tk.Frame):
         btn_plus.pack(fill="both", expand=True)
 
     def buka_toko(self):
-        self.controller.show_frame("MisiPemainBaruView")
+        self.controller.show_frame("TokoView")
 
     def build_title(self):
         tk.Label(self, text="LEADERBOARD", bg="white", fg="#1a1a2e",

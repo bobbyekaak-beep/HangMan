@@ -1,4 +1,3 @@
-# game_gui.py
 import tkinter as tk
 from tkinter import ttk
 import random
@@ -11,7 +10,6 @@ class Screen6Gameplay(tk.Frame):
         self.parent = parent
         self.controller = controller
         
-        # Inisialisasi object logic game
         self.logic = HangmanLogic()
 
         self.style = ttk.Style()
@@ -23,7 +21,6 @@ class Screen6Gameplay(tk.Frame):
         self.update_timer()
 
     def setup_ui(self):
-        # ── 1. MODERN COMPACT HUD ──────────────────
         hud_main = tk.Frame(self, bg="#1E293B", padx=14, pady=10, bd=0)
         hud_main.pack(fill="x", padx=12, pady=(12, 4))
 
@@ -47,40 +44,34 @@ class Screen6Gameplay(tk.Frame):
         self.lbl_hp_g = tk.Label(kanan, bg="#1E293B", font=("Arial", 9, "bold"), fg="#94A3B8")
         self.lbl_hp_g.pack(anchor="e")
 
-        # ── 2. CENTRAL TIMER BAR ─────────────────────────────────────────
         timer_frame = tk.Frame(self, bg="#0F172A")
         timer_frame.pack(fill="x", padx=12, pady=4)
         self.lbl_timer = tk.Label(timer_frame, bg="#0F172A", font=("Consolas", 14, "bold"), fg="#F59E0B")
         self.lbl_timer.pack(expand=True)
 
-        # ── 3. STATUS BANNER ───────────────────────────────────────────
         self.status_banner = tk.Frame(self, bg="#3B82F6", height=26)
         self.status_banner.pack(fill="x", padx=12, pady=2)
         self.status_banner.pack_propagate(False)
         self.lbl_status = tk.Label(self.status_banner, bg="#3B82F6", text="SISTEM SIAP! SILAKAN TEBAK HURUF", font=("Arial", 9, "bold"), fg="white")
         self.lbl_status.pack(expand=True)
 
-        # ── 4. INFO LEVEL CARD ────────────────────────────────────────────
         info_frame = tk.Frame(self, bg="#FFFFFF", highlightbackground="#E2E8F0", highlightthickness=1, pady=6)
         info_frame.pack(fill="x", padx=12, pady=6)
         self.lbl_level = tk.Label(info_frame, bg="#FFFFFF", font=("Arial", 11, "bold"), fg="#1E293B")
         self.lbl_level.pack()
         tk.Label(info_frame, text="Kategori: Hewan Mudah", bg="#FFFFFF", font=("Arial", 9), fg="#64748B").pack()
 
-        # ── 5. SLOT KATA RAHASIA ────────────────────
         self.word_frame = tk.Frame(self, bg="#0F172A")
         self.word_frame.pack(pady=10)
 
         self.lbl_ditebak = tk.Label(self, bg="#0F172A", font=("Arial", 9), fg="#64748B")
         self.lbl_ditebak.pack(pady=(0, 4))
 
-        # ── 6. KEYBOARD ARCADE A–Z ───────────────────────────────────────
         self.kb_frame = tk.Frame(self, bg="#0F172A")
         self.kb_frame.pack(pady=6)
         self.keys = {}
         self.build_keyboard()
 
-        # ── 7. UTILITY ITEM BAR ────────────────────────
         self.item_bar = tk.Frame(self, bg="#1E293B", height=65)
         self.item_bar.pack(side="bottom", fill="x", padx=12, pady=12)
         self.item_bar.pack_propagate(False)
@@ -88,18 +79,14 @@ class Screen6Gameplay(tk.Frame):
         self.update_visuals()
 
     def update_visuals(self):
-        # Update HP Bar & Label Player
         self.bar_p['value'] = (self.logic.hp_player / self.logic.hp_player_max) * 100
         self.lbl_hp_p.configure(text=f"{self.logic.hp_player} / {self.logic.hp_player_max}")
         
-        # Update HP Bar & Label Musuh
         self.bar_g['value'] = (self.logic.hp_musuh / self.logic.hp_musuh_max) * 100
         self.lbl_hp_g.configure(text=f"{int(self.logic.hp_musuh)} / {self.logic.hp_musuh_max}")
 
-        # Update Level Info Text
         self.lbl_level.configure(text=f"LEVEL 1 • KATA {self.logic.indeks_kata_sekarang + 1}/{len(self.logic.daftar_kata)}")
 
-        # Update Slots Kata Rahasia
         for w in self.word_frame.winfo_children(): w.destroy()
         for char in self.logic.kata_rahasia:
             terbuka = char in self.logic.huruf_ditebak
@@ -110,13 +97,11 @@ class Screen6Gameplay(tk.Frame):
             tk.Label(box, text=char if terbuka else "•", bg="#1E293B" if terbuka else "#334155",
                      font=("Consolas", 18, "bold"), fg="#38BDF8" if terbuka else "#94A3B8").pack(expand=True)
 
-        # Update Riwayat Tebakan
         if self.logic.huruf_ditebak:
             self.lbl_ditebak.configure(text=f"Riwayat Tebakan: [ {' '.join(sorted(self.logic.huruf_ditebak))} ]")
         else:
             self.lbl_ditebak.configure(text="Riwayat Tebakan: -")
 
-        # Update Item Bar Stok
         for w in self.item_bar.winfo_children(): w.destroy()
         items = [
             ("HINT LIGHT", f"x{self.logic.stok_hint}",  self.aksi_hint),
@@ -201,13 +186,13 @@ class Screen6Gameplay(tk.Frame):
         hp_player = self.logic.hp_player if mode == "victory" else 0
         kata = ", ".join(self.logic.daftar_kata) if mode == "victory" else self.logic.kata_rahasia
         
-        if hasattr(self.parent, "set_hasil_game"):
-            self.parent.set_hasil_game(
+        if hasattr(self.controller, "set_hasil_game"):
+            self.controller.set_hasil_game(
                 kata=kata, skor=skor, sisa_waktu=sisa_waktu, hp_player=hp_player,
                 tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah,
                 huruf_ditebak=set(), mode=mode
             )
-        self.after(1200, lambda: self.parent.controller.show_frame("Screen9Victory"))
+        self.after(1200, lambda: self.controller.show_frame("Screen9Victory"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()
@@ -273,7 +258,6 @@ class Screen6Gameplay(tk.Frame):
         else:
             self.tangani_kondisi()
 
-# ── WRAPPER TESTING RUN ───────────────────────────────────────────
 if __name__ == "__main__":
     class MockParent(tk.Tk):
         def __init__(self):

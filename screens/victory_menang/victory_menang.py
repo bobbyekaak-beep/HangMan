@@ -1,6 +1,11 @@
 import tkinter as tk 
 from database.koneksi import hubungkan_database 
 
+LEVELS = [
+    "Screen7GameplayLevel2",
+    "Screen8GameplayLevel3",
+]
+
 class Screen9Victory(tk.Frame): 
     def __init__(self, parent, controller): 
         super().__init__(parent, bg="white") 
@@ -14,7 +19,8 @@ class Screen9Victory(tk.Frame):
             
         # SECTION 2: DATA ACQUISITION (MULTI-USER & PROGRESS) 
         username_aktif = data.get("username", "mama") 
-        level_sekarang = data.get("level", 1) 
+        level_sekarang = data.get("level", 1)
+        self.level_sekarang = level_sekarang
         kata_diterima = data.get("kata", "HARIMAU, KANCIL, GAJAH") 
         sisa_waktu = data.get("sisa_waktu", 75) 
         hp_player = data.get("hp_player", 80) 
@@ -109,17 +115,18 @@ class Screen9Victory(tk.Frame):
         btn_menu.pack(fill="x", pady=6) 
 
     # SECTION 6: NAVIGATION HANDLERS (CONTROLLERS) 
-    def _action_lanjut(self): 
-        try: 
-            self.parent.switch_screen("game") 
-        except AttributeError: 
-            print("[PREVIEW] Tombol Lanjut Level Diklik") 
+    def _action_lanjut(self):
+        try:
+            next_screen = LEVELS[self.level_sekarang - 1]
+            self.controller.show_frame(next_screen)
+        except (IndexError, AttributeError):
+            self.controller.show_frame("MenuPage")
 
-    def _action_menu(self): 
-        try: 
-            self.parent.switch_screen("menu") 
-        except AttributeError: 
-            print("[PREVIEW] Tombol Kembali ke Menu Diklik") 
+    def _action_menu(self):
+        try:
+            self.controller.show_frame("MenuPage")
+        except AttributeError:
+            print("[PREVIEW] Tombol Kembali ke Menu Diklik")
 
     # SECTION 7: BACKEND DATABASE TRANSACTIONS (MySQL) 
     def _simpan_victory_reward_ke_db(self, username, level, koin, kata, sisa_waktu, hp, benar, salah): 

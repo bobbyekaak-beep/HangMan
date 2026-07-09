@@ -167,5 +167,4 @@ class ScreenDailyMission(tk.Frame):
                 huruf_ditebak=set(), 
                 mode=mode
             ))
-        self.after(delay, lambda: self.parent.switch_screen("MainMenu"))
-
+        self.after(delay, lambda: self.controller.switch_screen("MainMenu"))
