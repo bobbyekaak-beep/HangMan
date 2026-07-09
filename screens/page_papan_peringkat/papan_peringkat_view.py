@@ -85,8 +85,7 @@ class LeaderboardView(tk.Frame):
         btn_plus.pack(fill="both", expand=True)
 
     def buka_toko(self):
-        # prototype: nanti diganti self.controller.show_frame("Toko")
-        print("Masuk ke halaman Toko")
+        self.controller.show_frame("MisiPemainBaruView")
 
     def build_title(self):
         tk.Label(self, text="LEADERBOARD", bg="white", fg="#1a1a2e",

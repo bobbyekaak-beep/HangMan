@@ -1,7 +1,7 @@
 import tkinter as tk
 import random
 import winsound
-from logic import misiharianlogic
+from logic.page_game.misiharianlogic import DailyMissionLogic
 
 class ScreenDailyMission(tk.Frame):
     def __init__(self, parent, controller):
@@ -10,7 +10,7 @@ class ScreenDailyMission(tk.Frame):
         self.controller = controller
         
         # Inisialisasi logika permainan dengan menghubungkan ke fungsi UI (Callback)
-        self.logic = misiharianlogic(
+        self.logic = DailyMissionLogic(
             on_timer_update=self.ui_update_timer,
             on_banner_update=self._set_banner,
             on_game_over=self.ui_game_over,
@@ -155,8 +155,9 @@ class ScreenDailyMission(tk.Frame):
             hp = 0
             delay = 1500
 
-        if hasattr(self.parent, "set_hasil_game"):
-            self.parent.set_hasil_game(
+        if hasattr(self.controller, "set_hasil_game"):
+            # Gunakan self.after di sini agar suara menang/kalah selesai diputar dulu
+            self.after(delay, lambda: self.controller.set_hasil_game(
                 kata=self.logic.kata_rahasia, 
                 skor=skor_akhir, 
                 sisa_waktu=self.logic.sisa_waktu, 
@@ -165,27 +166,6 @@ class ScreenDailyMission(tk.Frame):
                 tebakan_salah=self.logic.total_tebakan_salah, 
                 huruf_ditebak=set(), 
                 mode=mode
-            )
-        self.after(delay, lambda: self.parent.switch_screen("screenresult.py"))
+            ))
+        self.after(delay, lambda: self.parent.switch_screen("MainMenu"))
 
-
-# ── RUN TESTING ──────────────────────────────────────────────────
-if __name__ == "__main__":
-    class MockParent(tk.Tk):
-        def __init__(self):
-            super().__init__()
-            self.title("Daily Mission - Time Attack")
-            self.geometry("460x420")
-            self.configure(bg="#111827")
-            
-        def switch_screen(self, screen_name):
-            print(f"[NAVIGASI] Pindah ke: {screen_name}")
-            
-        def set_hasil_game(self, **kwargs):
-            print("[DATA] Hasil akhir dikirim:")
-            for k, v in kwargs.items(): print(f"  - {k}: {v}")
-
-    app_parent = MockParent()
-    game_frame = ScreenDailyMission(parent=app_parent)
-    game_frame.pack(fill="both", expand=True)
-    app_parent.mainloop()

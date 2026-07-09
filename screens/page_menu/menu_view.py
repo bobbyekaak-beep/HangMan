@@ -41,7 +41,7 @@ class MenuPage(tk.Frame):
                   width=25, height=2, bd=0, command=lambda: controller.show_frame("PilihLevelApp")).pack(pady=8)
                   
         tk.Button(self, text="TOKO", bg="#FF9800", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=lambda: controller.show_frame("MisiPemainBaruView")).pack(pady=8)
+                  width=25, height=2, bd=0, command=lambda: controller.show_frame("TokoView")).pack(pady=8)
                   
         tk.Button(self, text="MISI HARIAN", bg="#757575", fg="white", font=("Arial", 12, "bold"),
                   width=25, height=2, bd=0, command=lambda: controller.show_frame("MisiHarianApp")).pack(pady=8)

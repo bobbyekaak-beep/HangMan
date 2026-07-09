@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+from database.koneksi import ambil_koin_user, tambah_koin_user
 
 class MisiHarianApp(tk.Frame):
     def __init__(self, parent, controller): 
@@ -41,7 +42,7 @@ class MisiHarianApp(tk.Frame):
 
     def populate_data(self, data=None):
         user_id = self.controller.user_aktif["id"]
-        self.coins = ambil_koin_dari_db(user_id) 
+        self.coins = ambil_koin_user(user_id) 
         self.coin_lbl.configure(text=self.format_koin())
         self.refresh_ui()
 
@@ -87,6 +88,11 @@ class MisiHarianApp(tk.Frame):
         ratio = selesai / self.total_misi if self.total_misi else 0
         self._buat_progress_bar(isi, width=340, height=7, ratio=ratio,
                                  bg_color="#A5D6A7", fill_color="white").pack(fill="x")
+
+        # Tombol Mulai Main Time Attack
+        tk.Button(isi, text="⚔️ MULAI MAIN TIME ATTACK ⚔️", font=("Arial", 10, "bold"),
+                  bg="#FF9800", fg="white", relief="flat", cursor="hand2",
+                  command=lambda: self.controller.show_frame("ScreenDailyMission")).pack(fill="x", pady=(10, 0))
 
     # KARTU MISI & KARTU BONUS 
 
@@ -218,7 +224,7 @@ class MisiHarianApp(tk.Frame):
 
 
     def kembali(self):
-        print("Kembali ke Menu Utama")
+        self.controller.show_frame("MenuPage")
 
     def format_koin(self):
         return f"{self.coins:,}".replace(",", ".")
@@ -248,6 +254,3 @@ class MisiHarianApp(tk.Frame):
         self._buat_filler()
         self._buat_footer()
 
-if __name__ == "__main__":
-    app = MisiHarianApp()
-    app.mainloop()

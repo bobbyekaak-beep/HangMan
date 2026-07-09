@@ -137,11 +137,28 @@ class Screen5PersiapanPerang(tk.Frame):
         canvas_h = self.txt_item_qtys["pulihkan_hp_canvas"]
         canvas_h.itemconfig(self.txt_item_qtys["pulihkan_hp"], text=f"x{qty_hp}")
 
-    def _action_mulai(self): 
-        try: 
-            self.controller.show_frame("") 
-        except AttributeError: 
-            print("[PREVIEW] Tombol 'MULAI PERTARUNGAN' Diklik -> Masuk ke Arena Play") 
+    def _action_mulai(self):
+        try:
+            level = getattr(self, 'level_terpilih', 1) # Angka 1 adalah default pencegahan error
+            
+            # 2. Logika percabangan untuk memanggil file UI yang tepat
+            if level == 1:
+                halaman_tujuan = "Screen6Gameplay"
+            elif level == 2:
+                halaman_tujuan = "Screen7GameplayLevel2"
+            elif level == 3:
+                halaman_tujuan = "Screen8GameplayLevel3"
+            else:
+                # Jika level lebih dari 3 atau tidak dikenali, lemparkan ke level 1
+                halaman_tujuan = "Screen6Gameplay" 
+            
+            print(f"Membuka arena untuk Level {level} -> {halaman_tujuan}")
+            
+            # 3. Eksekusi perpindahan layar (sekaligus mengirim ulang data level jika dibutuhkan)
+            self.controller.show_frame(halaman_tujuan, data={"level": level})
+            
+        except Exception as e:
+            print(f"[ERROR] Gagal memuat arena game: {e}") 
 
     def _action_back(self): 
         try: 

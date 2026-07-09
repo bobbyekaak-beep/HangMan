@@ -46,8 +46,8 @@ class PilihLevelApp(tk.Frame):
     def buat_header(self):
         header = tk.Frame(self, bg="white")
         header.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(header, text="←", font=("Arial", 16, "bold"), bg="white").pack(side="left")
-        tk.Label(header, text="PILIH LEVEL", font=("Arial", 16, "bold"), bg="white").pack(side="left", padx=15)
+        tk.Button(header, text="←", font=("Arial", 16, "bold"), bg="white", command=self.controller.go_back).pack(side="left")
+        tk.Button(header, text="PILIH LEVEL", font=("Arial", 16, "bold"), bg="white").pack(side="left", padx=15)
 
     def buat_kartu_dunia(self):
         kartu = tk.Frame(self, bg="white", highlightbackground=BORDER, highlightthickness=1)

@@ -3,7 +3,7 @@ from screens.page_splash.splash_view import SplashPage
 from screens.page_login.login_view import LoginPage
 from screens.page_menu.menu_view import MenuPage
 from screens.page_pilih_level.pilih_level_view import PilihLevelApp
-from screens.page_toko.toko_view import MisiPemainBaruView
+from screens.page_toko.toko_view import TokoView
 from screens.page_papan_peringkat.papan_peringkat_view import LeaderboardView
 from screens.page_misi_pemain_baru.misi_pemain_baru_view import MisiHarianApp
 from screens.persiapan.persiapan import Screen5PersiapanPerang
@@ -12,11 +12,12 @@ from screens.page_game.level2ui import Screen7GameplayLevel2
 from screens.page_game.level3ui import Screen8GameplayLevel3
 from screens.victory_menang.victory_menang import Screen9Victory
 from screens.game_over.game_over import Screen10GameOver
+from screens.page_game.misiharianui import ScreenDailyMission
 
 DAFTAR_HALAMAN = [
-    SplashPage, LoginPage, MenuPage, PilihLevelApp, MisiPemainBaruView, LeaderboardView,
+    SplashPage, LoginPage, MenuPage, PilihLevelApp, TokoView, LeaderboardView,
     MisiHarianApp, Screen5PersiapanPerang, Screen6Gameplay, Screen7GameplayLevel2,
-    Screen8GameplayLevel3, Screen9Victory, Screen10GameOver
+    Screen8GameplayLevel3, Screen9Victory, Screen10GameOver, ScreenDailyMission
     ]
 class HangmanApp(tk.Tk):
     def __init__(self):
