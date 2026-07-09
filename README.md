@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎮 HANGMAN: WORD QUEST
+# 🎮 BYTA GAME : WORD GUEST 
 
 ### "Satu huruf tepat, musuh sekarat. Satu tebakan melesat, nyawamu tamat!"
 
