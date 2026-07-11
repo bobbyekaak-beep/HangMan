@@ -3,6 +3,7 @@ from tkinter import messagebox
 from database.koneksi import hubungkan_database
 import hashlib
 from PIL import Image, ImageTk
+from audio.sound_manager import putar_sfx
 
 class LoginPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -51,7 +52,12 @@ class LoginPage(tk.Frame):
 
         # Tombol Kembali
         tk.Button(self, text="← Kembali ke Awal", bg="white", bd=0, fg="red",
-                  command=lambda: controller.show_frame("SplashPage")).pack(pady=30)
+                  command=lambda: self._aksi_kembali(controller)).pack(pady=30)
+
+    def _aksi_kembali(self, controller):
+        # Bunyikan sfx klik lalu kembali ke halaman awal
+        putar_sfx("klik.mp3")
+        controller.show_frame("SplashPage")
 
     def tampilkan_password(self, event):
         # Menghilangkan bintang (show="")
@@ -66,6 +72,7 @@ class LoginPage(tk.Frame):
         return hashlib.sha256(password.encode()).hexdigest()
     
     def proses_daftar(self):
+        putar_sfx("klik.mp3")
         user = self.entry_user.get()
         password = self.entry_pass.get()
         
@@ -77,8 +84,9 @@ class LoginPage(tk.Frame):
 
         db = hubungkan_database()
         if db:
-            kursor = db.cursor()
+            kursor = None
             try:
+                kursor = db.cursor()
                 sql = "INSERT INTO users (username, password, coins) VALUES (%s, %s, %s)"
                 kursor.execute(sql, (user, password_hash, 0))
                 db.commit()
@@ -87,11 +95,14 @@ class LoginPage(tk.Frame):
                 print(f"[DATABASE] Gagal daftar: {e}")
                 messagebox.showerror("Error", "Gagal mendaftar. Mungkin username sudah ada.")
             finally:
+                if kursor is not None:
+                    kursor.close()
                 db.close()
         else:
             messagebox.showerror("Error", "Database XAMPP belum menyala!")
 
     def proses_login(self):
+        putar_sfx("klik.mp3")
         user = self.entry_user.get()
         password = self.entry_pass.get()
 
@@ -99,23 +110,33 @@ class LoginPage(tk.Frame):
 
         db = hubungkan_database()
         if db:
-            kursor = db.cursor()
-            sql = "SELECT id, username, coins FROM users WHERE username=%s AND password=%s"
-            kursor.execute(sql, (user, password_hash))
-            hasil = kursor.fetchone()
-            
-            if hasil:
-                messagebox.showinfo("Sukses", f"Selamat datang, {user}!")
-                self.controller.user_aktif = {
-                    "id": hasil[0],
-                    "username": hasil[1],
-                    "coins": hasil[2]
-                }
-                # Kosongkan kolom isian setelah berhasil masuk
-                self.entry_user.delete(0, tk.END)
-                self.entry_pass.delete(0, tk.END)
-                self.controller.frames["MenuPage"].perbarui_tampilan()
-                self.controller.show_frame("MenuPage")
-            else:
-                messagebox.showerror("Gagal", "Username atau Password salah!")
-            db.close()
+            kursor = None
+            try:
+                kursor = db.cursor()
+                sql = "SELECT id, username, coins FROM users WHERE username=%s AND password=%s"
+                kursor.execute(sql, (user, password_hash))
+                hasil = kursor.fetchone()
+
+                if hasil:
+                    messagebox.showinfo("Sukses", f"Selamat datang, {user}!")
+                    self.controller.user_aktif = {
+                        "id": hasil[0],
+                        "username": hasil[1],
+                        "coins": hasil[2]
+                    }
+                    # Kosongkan kolom isian setelah berhasil masuk
+                    self.entry_user.delete(0, tk.END)
+                    self.entry_pass.delete(0, tk.END)
+                    self.controller.frames["MenuPage"].perbarui_tampilan()
+                    self.controller.show_frame("MenuPage")
+                else:
+                    messagebox.showerror("Gagal", "Username atau Password salah!")
+            except Exception as e:
+                print(f"[DATABASE] Gagal login: {e}")
+                messagebox.showerror("Error", "Terjadi kesalahan saat mencoba login.")
+            finally:
+                if kursor is not None:
+                    kursor.close()
+                db.close()
+        else:
+            messagebox.showerror("Error", "Database XAMPP belum menyala!")
