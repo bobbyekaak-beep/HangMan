@@ -1,4 +1,6 @@
 import tkinter as tk
+from database.koneksi import ambil_highest_level, MAX_LEVEL
+from audio.sound_manager import putar_sfx
 
 WIN_W = 400
 WIN_H = 700
@@ -35,6 +37,9 @@ LEVELS = [
         "text": "#E53935",
     },
 ]
+
+
+WARNA_TERKUNCI = {"block": "#B0B0B0", "border": "#D9D9D9", "bg": "#F5F5F5", "text": "#9E9E9E"}
 
 
 def rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
@@ -143,6 +148,7 @@ class PilihLevelApp(tk.Frame):
         divider.create_line(86, 7, 140, 7, fill="#8BC34A", width=2)
 
     def kembali(self):
+        putar_sfx("klik.mp3")
         self.controller.go_back()
 
     def buat_kartu_level(self, parent):
@@ -150,32 +156,45 @@ class PilihLevelApp(tk.Frame):
         self.cards_canvas = tk.Canvas(parent, width=WIN_W, height=tinggi_canvas, bg="white", highlightthickness=0)
         self.cards_canvas.pack()
 
+    def on_show(self):
+        """Muat progres user dari database lalu gambar ulang kartu (terkunci/terbuka)"""
+        highest = self._ambil_highest_level()
+        self.cards_canvas.delete("all")
         y = 0
-        for level in LEVELS:
-            self.gambar_kartu(y, level)
+        for nomor, level in enumerate(LEVELS, start=1):
+            terkunci = nomor > highest
+            self.gambar_kartu(y, level, terkunci)
             y += CARD_H + CARD_GAP
 
-    def gambar_kartu(self, y, level):
+    def _ambil_highest_level(self):
+        if self.controller is None or not hasattr(self.controller, "user_aktif") or self.controller.user_aktif is None:
+            return MAX_LEVEL
+        return ambil_highest_level(self.controller.user_aktif["id"])
+
+    def gambar_kartu(self, y, level, terkunci=False):
         canvas = self.cards_canvas
         x1, x2 = 20, WIN_W - 20
         y2 = y + CARD_H
         r = 20
         cy = y + CARD_H / 2
+        warna = WARNA_TERKUNCI if terkunci else level
 
-        rounded_rect(canvas, x1, y, x2, y2, r, fill=level["bg"], outline=level["border"], width=2)
+        rounded_rect(canvas, x1, y, x2, y2, r, fill=warna["bg"], outline=warna["border"], width=2)
 
         block_w = 100
-        left_rounded_rect(canvas, x1, y, x1 + block_w, y2, r, fill=level["block"], outline=level["block"])
+        left_rounded_rect(canvas, x1, y, x1 + block_w, y2, r, fill=warna["block"], outline=warna["block"])
         canvas.create_polygon(
             x1 + block_w, cy - 20, x1 + block_w + 14, cy, x1 + block_w, cy + 20,
-            fill=level["block"], outline=level["block"]
+            fill=warna["block"], outline=warna["block"]
         )
 
         circ_r = 32
         ccx = x1 + block_w / 2
         canvas.create_oval(ccx - circ_r, cy - circ_r, ccx + circ_r, cy + circ_r, fill="white", outline="")
 
-        if level["key"] == "easy":
+        if terkunci:
+            canvas.create_text(ccx, cy, text="🔒", font=("Segoe UI", 20))
+        elif level["key"] == "easy":
             gambar_daun(canvas, ccx, cy, 16, level["text"])
         elif level["key"] == "medium":
             gambar_gunung(canvas, ccx, cy, 18, level["block"], level["border"])
@@ -184,9 +203,15 @@ class PilihLevelApp(tk.Frame):
 
         text_x = x1 + block_w + 25
         canvas.create_text(text_x, y + 40, text=level["title"], font=("Segoe UI", 17, "bold"),
-                            fill=level["text"], anchor="w")
-        canvas.create_text(text_x, y + 72, text=level["desc"], font=("Segoe UI", 9),
-                            fill="#444444", anchor="w", justify="left")
+                            fill=warna["text"], anchor="w")
+
+        deskripsi = level["desc"] if not terkunci else "Selesaikan level sebelumnya\nuntuk membuka level ini."
+        canvas.create_text(text_x, y + 72, text=deskripsi, font=("Segoe UI", 9),
+                            fill="#999999" if terkunci else "#444444", anchor="w", justify="left")
+
+        if terkunci:
+            return
+
         canvas.create_text(x2 - 20, cy, text="›", font=("Segoe UI", 22, "bold"), fill=level["text"])
 
         klik_area = canvas.create_rectangle(x1, y, x2, y2, fill="", outline="")
@@ -195,8 +220,10 @@ class PilihLevelApp(tk.Frame):
         canvas.tag_bind(klik_area, "<Leave>", lambda e: canvas.config(cursor=""))
 
     def pilih_level(self, key):
-        # sesuaikan nama frame tujuan dengan yang ada di main.py
-        self.controller.show_frame("PilihLevelAngka", data={"kesulitan": key})
+        # easy/medium/hard = level 1/2/3
+        putar_sfx("klik.mp3")
+        level_map = {"easy": 1, "medium": 2, "hard": 3}
+        self.controller.show_frame("Screen5PersiapanPerang", data={"level": level_map[key]})
 
     def buat_footer(self, parent):
         canvas = tk.Canvas(parent, width=WIN_W, height=70, bg="white", highlightthickness=0)
@@ -234,5 +261,6 @@ if __name__ == "__main__":
     controller = _ControllerTiruan(root)
     frame = PilihLevelApp(root, controller)
     frame.pack(fill="both", expand=True)
+    frame.on_show()
 
     root.mainloop()
