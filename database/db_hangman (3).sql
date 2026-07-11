@@ -6,13 +6,6 @@
 -- Waktu pembuatan: 09 Jul 2026 pada 05.43
 -- Versi server: 10.4.27-MariaDB
 -- Versi PHP: 7.4.33
--- CATATAN: Ini adalah versi FINAL v2. Perubahan dari versi sebelumnya:
---   1. Tabel users     -> tambah kolom statistik pemain (total_game, total_win, total_lose, highest_level)
---   2. Tabel save_game -> tambah kolom kategori, huruf_salah, tebakan_benar, tebakan_salah; status disederhanakan jadi PLAYING/PAUSE
---   3. Tabel user_misi -> tambah kolom target dan selesai
---   4. Tabel baru      -> transaksi_koin (riwayat perubahan saldo koin)
---   5. Tabel baru      -> aktivitas_user (log aktivitas untuk kebutuhan debugging)
---   6. Tabel scores    -> tambah index pada level_reached dan tanggal_main untuk leaderboard
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -32,6 +25,7 @@ SET time_zone = "+00:00";
 
 --
 -- Struktur dari tabel `items`
+-- Daftar item yang bisa dibeli pemain di Toko.
 --
 
 CREATE TABLE `items` (
@@ -50,18 +44,49 @@ CREATE TABLE `items` (
 INSERT INTO `items` (`id`, `nama`, `icon`, `color`, `harga`, `kategori`) VALUES
 (1, 'PETUNJUK\nHURUF', '💡', '#FFC107', 50, 'BANTUAN'),
 (2, 'TAMBAH\nWAKTU', '⏱️', '#2196F3', 70, 'WAKTU'),
-(3, 'PULIHKAN\nHP', '♥️', '#F44336', 60, 'HEALING'),
-(4, 'HAPUS 3\nHURUF SALAH', '❌', '#757575', 80, 'BANTUAN'),
-(5, 'LIHAT\nKATEGORI', '🔎', '#9C27B0', 40, 'BANTUAN'),
-(6, 'TEBAK\nKATA', '🎯', '#E91E63', 120, 'BANTUAN');
+(3, 'PULIHKAN\nHP', '♥️', '#F44336', 60, 'HEALING');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `pertanyaan`
+-- Bank soal tebak kata per level (kategori, kata, dan petunjuk).
+--
+
+CREATE TABLE `pertanyaan` (
+  `id_pertanyaan` int(11) NOT NULL,
+  `id_level` int(11) NOT NULL,
+  `kategori` varchar(50) NOT NULL,
+  `kata` varchar(50) NOT NULL,
+  `petunjuk` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `pertanyaan`
+--
+
+INSERT INTO `pertanyaan` (`id_pertanyaan`, `id_level`, `kategori`, `kata`, `petunjuk`) VALUES
+(1, 1, 'Hewan', 'KUCING', 'Hewan peliharaan yang suka mengeong'),
+(2, 1, 'Hewan', 'AYAM', 'Hewan yang berkokok setiap pagi'),
+(3, 1, 'Hewan', 'SINGA', 'Dijuluki raja hutan'),
+(4, 1, 'Hewan', 'RUSA', 'Memiliki tanduk bercabang'),
+(5, 1, 'Hewan', 'GAJAH', 'Mamalia darat terbesar'),
+(6, 2, 'Buah', 'APEL', 'Buah berwarna merah'),
+(7, 2, 'Buah', 'JERUK', 'Buah yang kaya vitamin C'),
+(8, 2, 'Buah', 'MANGGA', 'Buah berwarna hijau saat muda'),
+(9, 2, 'Buah', 'NANAS', 'Kulitnya berduri'),
+(10, 2, 'Buah', 'SEMANGKA', 'Buah berwarna hijau di luar dan merah di dalam'),
+(11, 3, 'Negara', 'INDONESIA', 'Negara kepulauan terbesar di Asia Tenggara'),
+(12, 3, 'Negara', 'JEPANG', 'Negeri Sakura'),
+(13, 3, 'Negara', 'MALAYSIA', 'Negara tetangga Indonesia'),
+(14, 3, 'Negara', 'THAILAND', 'Dijuluki Negeri Gajah Putih'),
+(15, 3, 'Negara', 'SINGAPURA', 'Negara kota di Asia Tenggara');
 
 -- --------------------------------------------------------
 
 --
 -- Struktur dari tabel `scores`
---
--- CATATAN: tabel ini adalah RIWAYAT permainan, jadi setiap game selesai
--- harus pakai INSERT baru, jangan pernah di-UPDATE.
+-- Riwayat permainan yang sudah selesai (menang/kalah), selalu diisi lewat INSERT baru.
 --
 
 CREATE TABLE `scores` (
@@ -83,20 +108,7 @@ CREATE TABLE `scores` (
 
 --
 -- Struktur dari tabel `users`
---
--- CATATAN: kolom coins WAJIB diubah lewat UPDATE setiap ada penambahan/
--- pengurangan koin, jangan hanya diubah di variabel Python.
---
--- TAMBAHAN BARU: kolom total_game, total_win, total_lose, highest_level.
--- Kolom-kolom ini dipakai untuk menampilkan statistik pemain di halaman
--- Profile. Nilainya diupdate setiap kali satu sesi permainan selesai
--- (misalnya bersamaan dengan proses INSERT ke tabel scores).
---
--- PERUBAHAN: default coins diubah dari 0 menjadi 300, sebagai bonus gold
--- untuk setiap akun baru yang mendaftar. Nilai ini hanya berlaku kalau
--- kode Python melakukan INSERT tanpa menyertakan kolom coins secara
--- eksplisit. Untuk lebih aman, sebaiknya kode register tetap mengisi
--- nilai 300 secara langsung di query INSERT-nya.
+-- Akun pemain beserta saldo koin dan statistik permainan.
 --
 
 CREATE TABLE `users` (
@@ -122,10 +134,7 @@ INSERT INTO `users` (`id`, `username`, `password`, `coins`, `total_game`, `total
 
 --
 -- Struktur dari tabel `user_inventory`
---
--- CATATAN: karena sudah ada UNIQUE(user_id, item_id), pembelian item
--- sebaiknya pakai INSERT ... ON DUPLICATE KEY UPDATE jumlah=jumlah+1,
--- supaya tidak perlu cek manual apakah baris sudah ada atau belum.
+-- Item yang sudah dibeli tiap user beserta jumlahnya.
 --
 
 CREATE TABLE `user_inventory` (
@@ -139,52 +148,21 @@ CREATE TABLE `user_inventory` (
 
 --
 -- Struktur dari tabel `user_misi`
---
--- CATATAN: sudah ada UNIQUE(user_id, misi_key), jadi update progress misi
--- sebaiknya pakai INSERT ... ON DUPLICATE KEY UPDATE current=current+1.
---
--- TAMBAHAN BARU: kolom target dan selesai.
--- target  -> menyimpan target misi (misalnya "menang 5 kali"), jadi kalau
---            target misi berubah di kemudian hari, tinggal update kolom ini
---            tanpa perlu ubah kode program.
--- selesai -> menandai apakah progress current sudah mencapai target,
---            terpisah dari kolom diambil (diambil = hadiah sudah diklaim).
+-- Progress misi harian tiap user.
 --
 
 CREATE TABLE `user_misi` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `misi_key` varchar(50) NOT NULL,
-  `current` int(11) NOT NULL DEFAULT 0,
-  `target` int(11) NOT NULL DEFAULT 0,
-  `selesai` tinyint(1) NOT NULL DEFAULT 0,
-  `diambil` tinyint(1) NOT NULL DEFAULT 0
+  `current` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
 --
 -- Struktur dari tabel `save_game`
---
--- Menyimpan progress permainan yang SEDANG berjalan (belum menang/kalah),
--- supaya pemain bisa lanjut dari checkpoint terakhir. user_id dibuat UNIQUE
--- karena satu user hanya boleh punya 1 baris save aktif.
---
--- Alur yang disarankan: begitu pemain MENANG atau KALAH, data di tabel ini
--- dipindahkan ke tabel scores (INSERT), lalu baris di save_game ini DIHAPUS
--- (DELETE), bukan diubah statusnya jadi FINISHED. Jadi status cukup PLAYING
--- (sedang berlangsung) dan PAUSE (ditinggal keluar aplikasi).
---
--- TAMBAHAN BARU: kategori, huruf_salah, tebakan_benar, tebakan_salah.
--- Kolom-kolom ini perlu disimpan juga supaya ketika game dilanjutkan,
--- kondisinya benar-benar identik dengan sebelum ditutup (bukan cuma kata
--- dan huruf yang benar, tapi huruf yang salah tebak dan hitungannya juga
--- harus balik seperti semula).
---
--- PERUBAHAN: kolom coins diganti nama menjadi coins_session, supaya tidak
--- rancu dengan users.coins. users.coins adalah saldo koin PERMANEN milik
--- pemain, sedangkan save_game.coins_session hanya mencatat koin yang
--- didapat SELAMA sesi permainan yang sedang berjalan ini.
+-- Progress permainan yang sedang berjalan, supaya bisa dilanjutkan.
 --
 
 CREATE TABLE `save_game` (
@@ -207,15 +185,8 @@ CREATE TABLE `save_game` (
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `transaksi_koin` (TABEL BARU)
---
--- Mencatat setiap perubahan saldo koin (dapat dari menang, dikurangi
--- karena beli item, dari daily reward, dsb). Berguna kalau suatu saat
--- saldo koin pemain terlihat tidak sesuai, tinggal cek tabel ini untuk
--- lacak penyebabnya.
---
--- jumlah -> nilai perubahan, bisa positif (menambah) atau negatif (mengurangi)
--- saldo  -> saldo AKHIR setelah transaksi ini, jadi tidak perlu dihitung ulang
+-- Struktur dari tabel `transaksi_koin`
+-- Riwayat setiap perubahan saldo koin pemain.
 --
 
 CREATE TABLE `transaksi_koin` (
@@ -230,11 +201,8 @@ CREATE TABLE `transaksi_koin` (
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `aktivitas_user` (TABEL BARU, opsional)
---
--- Log aktivitas pemain (login, logout, main, menang, kalah, beli item,
--- pakai item). Sifatnya opsional, tapi sangat membantu saat debugging,
--- misalnya untuk melacak urutan kejadian sebelum error terjadi.
+-- Struktur dari tabel `aktivitas_user`
+-- Log aktivitas pemain untuk kebutuhan debugging.
 --
 
 CREATE TABLE `aktivitas_user` (
@@ -244,6 +212,39 @@ CREATE TABLE `aktivitas_user` (
   `keterangan` varchar(255) DEFAULT NULL,
   `tanggal` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Kolom tambahan untuk mencatat bintang yang diperoleh pemain
+--
+
+ALTER TABLE `users`
+  ADD COLUMN `total_bintang` int(11) NOT NULL DEFAULT 0;
+
+ALTER TABLE `scores`
+  ADD COLUMN `bintang` int(11) NOT NULL DEFAULT 0;
+
+--
+-- Kolom tambahan untuk membatasi main mode Time Attack (maks 3 kali per akun)
+--
+
+ALTER TABLE `users`
+  ADD COLUMN `time_attack_played` int(11) NOT NULL DEFAULT 0;
+
+--
+-- Kolom tambahan untuk progress misi harian (target misi, status selesai,
+-- dan status sudah/belum diambil hadiahnya)
+--
+
+ALTER TABLE `user_misi`
+  ADD COLUMN `target` int(11) NOT NULL DEFAULT 0;
+
+ALTER TABLE `user_misi`
+  ADD COLUMN `selesai` tinyint(1) NOT NULL DEFAULT 0;
+
+ALTER TABLE `user_misi`
+  ADD COLUMN `diambil` tinyint(1) NOT NULL DEFAULT 0;
 
 --
 -- Indexes for dumped tables
@@ -256,11 +257,13 @@ ALTER TABLE `items`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indeks untuk tabel `scores`
+-- Indeks untuk tabel `pertanyaan`
 --
--- TAMBAHAN BARU: index level_reached dan tanggal_main supaya query
--- leaderboard (ORDER BY level_reached DESC / tanggal_main) lebih cepat
--- saat datanya sudah banyak.
+ALTER TABLE `pertanyaan`
+  ADD PRIMARY KEY (`id_pertanyaan`);
+
+--
+-- Indeks untuk tabel `scores`
 --
 ALTER TABLE `scores`
   ADD PRIMARY KEY (`id`),
@@ -292,14 +295,13 @@ ALTER TABLE `user_misi`
 
 --
 -- Indeks untuk tabel `save_game`
--- user_id dibuat UNIQUE supaya 1 user cuma punya 1 baris save aktif.
 --
 ALTER TABLE `save_game`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `user_id` (`user_id`);
 
 --
--- Indeks untuk tabel `transaksi_koin` (BARU)
+-- Indeks untuk tabel `transaksi_koin`
 --
 ALTER TABLE `transaksi_koin`
   ADD PRIMARY KEY (`id`),
@@ -307,7 +309,7 @@ ALTER TABLE `transaksi_koin`
   ADD KEY `tanggal` (`tanggal`);
 
 --
--- Indeks untuk tabel `aktivitas_user` (BARU)
+-- Indeks untuk tabel `aktivitas_user`
 --
 ALTER TABLE `aktivitas_user`
   ADD PRIMARY KEY (`id`),
@@ -322,7 +324,13 @@ ALTER TABLE `aktivitas_user`
 -- AUTO_INCREMENT untuk tabel `items`
 --
 ALTER TABLE `items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT untuk tabel `pertanyaan`
+--
+ALTER TABLE `pertanyaan`
+  MODIFY `id_pertanyaan` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT untuk tabel `scores`
@@ -355,13 +363,13 @@ ALTER TABLE `save_game`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT untuk tabel `transaksi_koin` (BARU)
+-- AUTO_INCREMENT untuk tabel `transaksi_koin`
 --
 ALTER TABLE `transaksi_koin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT untuk tabel `aktivitas_user` (BARU)
+-- AUTO_INCREMENT untuk tabel `aktivitas_user`
 --
 ALTER TABLE `aktivitas_user`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
@@ -391,19 +399,18 @@ ALTER TABLE `user_misi`
 
 --
 -- Ketidakleluasaan untuk tabel `save_game`
--- ON DELETE CASCADE supaya kalau user dihapus, data save-nya ikut terhapus.
 --
 ALTER TABLE `save_game`
   ADD CONSTRAINT `save_game_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- Ketidakleluasaan untuk tabel `transaksi_koin` (BARU)
+-- Ketidakleluasaan untuk tabel `transaksi_koin`
 --
 ALTER TABLE `transaksi_koin`
   ADD CONSTRAINT `transaksi_koin_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- Ketidakleluasaan untuk tabel `aktivitas_user` (BARU)
+-- Ketidakleluasaan untuk tabel `aktivitas_user`
 --
 ALTER TABLE `aktivitas_user`
   ADD CONSTRAINT `aktivitas_user_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
