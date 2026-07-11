@@ -1,0 +1,1 @@
+from .pertanyaan import ambil_pertanyaan
