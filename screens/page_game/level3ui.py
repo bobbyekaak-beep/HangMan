@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 import random
-import winsound
-from logic.page_game.level3logic import Level3Logic  # Import kelas logika
-from database.koneksi import hubungkan_database
+from logic.page_game.level3logic import Level3Logic
+from audio.sound_manager import putar_sfx, kecilkan_musik_latar, putar_sfx_hitung_mundur
 
 class Screen8GameplayLevel3(tk.Frame):
     def __init__(self, parent, controller):
@@ -11,25 +11,44 @@ class Screen8GameplayLevel3(tk.Frame):
         self.parent = parent
         self.controller = controller
 
-        self.username = None
-        self.user_id = None
-
-        # Inisialisasi logika game
-        self.logic = Level3Logic()
+        self.logic = Level3Logic(self._ambil_user_id())
+        self._run_id = 0
 
         self.style = ttk.Style()
         self.style.theme_use('default')
-        self.style.configure("Player.Horizontal.TProgressbar", 
+        self.style.configure("Player.Horizontal.TProgressbar",
                              troughcolor="#1F2937", background="#10B981", thickness=18)
-        self.style.configure("Enemy.Horizontal.TProgressbar", 
+        self.style.configure("Enemy.Horizontal.TProgressbar",
                              troughcolor="#1F2937", background="#EF4444", thickness=18)
 
         self.keys = {}
         self.setup_ui()
-        self.update_timer()
+        self.bind("<Key>", self.tekan_keyboard)
+        self.focus_set()
+
+    def _ambil_user_id(self):
+        if self.controller is not None and hasattr(self.controller, "user_aktif") and self.controller.user_aktif is not None:
+            return self.controller.user_aktif["id"]
+        return None
+
+    def on_show(self):
+        kecilkan_musik_latar()
+        try:
+            self.logic = Level3Logic(self._ambil_user_id())
+        except ValueError as e:
+            messagebox.showerror("Gagal Memuat Soal", str(e))
+            self.controller.go_back()
+            return
+        self._run_id += 1
+        self.build_keyboard()
+        self.perbarui_hud_bars()
+        self.update_slots()
+        self.render_bottom_items()
+        self._set_banner("#D32F2F", "⚠️ LEVEL 3: MODE HARD ⚠️")
+        self.focus_set()
+        self.update_timer(self._run_id)
 
     def setup_ui(self):
-        # ── 1. TOP HUD ───────────────────────────────────────────
         hud = tk.Frame(self, bg="#111827")
         hud.pack(fill="x", padx=14, pady=(14, 6))
 
@@ -60,38 +79,54 @@ class Screen8GameplayLevel3(tk.Frame):
 
         self.perbarui_hud_bars()
 
-        # ── 2. STATUS BANNER ─────────────────────────────────────
-        self.status_banner = tk.Frame(self, bg="#D32F2F", height=32) 
+        self.status_banner = tk.Frame(self, bg="#D32F2F", height=32)
         self.status_banner.pack(fill="x", padx=14, pady=(6, 4))
         self.status_banner.pack_propagate(False)
 
         self.lbl_status = tk.Label(self.status_banner, bg="#D32F2F", text="⚠️ LEVEL 3: MODE HARD ⚠️", font=("Arial", 10, "bold"), fg="white")
         self.lbl_status.pack(expand=True)
 
-        # ── 3. INFO LEVEL & KATEGORI ──────────────────────────────
         info_frame = tk.Frame(self, bg="#1F2937", highlightbackground="#374151", highlightthickness=1)
         info_frame.pack(fill="x", padx=14, pady=4)
 
-        self.lbl_level = tk.Label(info_frame, bg="#1F2937", font=("Arial", 12, "bold"), fg="#EF4444")
-        self.lbl_level.pack(pady=(6, 0))
-        self.perbarui_teks_level()
-        
-        tk.Label(info_frame, text="Kategori: Hewan Langka & Panjang", bg="#1F2937", font=("Arial", 10), fg="#9CA3AF").pack(pady=(0, 6))
+        self.lbl_level = tk.Label(
+            info_frame,
+            bg="#1F2937",
+            font=("Arial",12,"bold"),
+            fg="#EF4444"
+        )
+        self.lbl_level.pack(pady=(6,0))
 
-        # ── 4. SLOT KATA RAHASIA ──────────────────────────────────
+        self.lbl_kategori = tk.Label(
+            info_frame,
+            bg="#1F2937",
+            font=("Arial",10,"bold"),
+            fg="#60A5FA"
+        )
+        self.lbl_kategori.pack()
+
+        self.lbl_petunjuk = tk.Label(
+            info_frame,
+            bg="#1F2937",
+            font=("Arial",9),
+            fg="#9CA3AF",
+            wraplength=350,
+            justify="center"
+        )
+        self.lbl_petunjuk.pack(pady=(0,6))
+
+        self.perbarui_teks_level()
+
         self.word_frame = tk.Frame(self, bg="#111827")
         self.word_frame.pack(pady=16)
 
-        # ── 5. KETERANGAN HURUF DITEBAK ──────────────────────────
         self.lbl_ditebak = tk.Label(self, bg="#111827", text="Huruf sudah ditebak: -", font=("Arial", 9), fg="#6B7280")
         self.lbl_ditebak.pack()
 
-        # ── 6. KEYBOARD A–Z ──────────────────────────────────────
         self.kb_frame = tk.Frame(self, bg="#111827")
         self.kb_frame.pack(pady=12)
         self.build_keyboard()
 
-        # ── 7. ITEM BAR BAWAH ─────────────────────────────────────
         self.item_bar = tk.Frame(self, bg="#1F2937", highlightbackground="#374151", highlightthickness=1, height=75)
         self.item_bar.pack(side="bottom", fill="x", padx=14, pady=14)
         self.item_bar.pack_propagate(False)
@@ -102,12 +137,22 @@ class Screen8GameplayLevel3(tk.Frame):
     def perbarui_hud_bars(self):
         self.bar_p['value'] = (self.logic.hp_player / self.logic.hp_player_max) * 100
         self.lbl_hp_p.configure(text=f"{self.logic.hp_player}/{self.logic.hp_player_max}")
-        
+
         self.bar_g['value'] = (self.logic.hp_musuh / self.logic.hp_musuh_max) * 100
         self.lbl_hp_g.configure(text=f"{int(self.logic.hp_musuh)}/{self.logic.hp_musuh_max}")
 
     def perbarui_teks_level(self):
-        self.lbl_level.configure(text=f"LEVEL 3 (Kata {self.logic.indeks_kata_sekarang + 1}/{len(self.logic.daftar_kata)})")
+        self.lbl_level.configure(
+            text=f"LEVEL 3 (Kata {self.logic.indeks_kata_sekarang + 1}/{len(self.logic.daftar_kata)})"
+        )
+
+        self.lbl_kategori.configure(
+            text=f"Kategori : {self.logic.kategori}"
+        )
+
+        self.lbl_petunjuk.configure(
+            text=f"Petunjuk : {self.logic.petunjuk}"
+        )
 
     def update_slots(self):
         for w in self.word_frame.winfo_children():
@@ -117,7 +162,7 @@ class Screen8GameplayLevel3(tk.Frame):
             terbuka = char in self.logic.huruf_ditebak
             box = tk.Frame(self.word_frame, bg="#1F2937" if terbuka else "#374151",
                            highlightbackground="#00E5FF" if terbuka else "#4B5563", highlightthickness=1, width=34, height=44)
-            box.pack(side="left", padx=2) 
+            box.pack(side="left", padx=2)
             box.pack_propagate(False)
 
             tk.Label(box, text=char if terbuka else "_", bg="#1F2937" if terbuka else "#374151",
@@ -128,6 +173,8 @@ class Screen8GameplayLevel3(tk.Frame):
             self.lbl_ditebak.configure(text=f"Huruf sudah ditebak: {huruf_str}")
         else:
             self.lbl_ditebak.configure(text="Huruf sudah ditebak: -")
+
+        self.perbarui_teks_level()
 
     def build_keyboard(self):
         for w in self.kb_frame.winfo_children():
@@ -144,13 +191,28 @@ class Screen8GameplayLevel3(tk.Frame):
             f.pack(pady=2)
             for char in row:
                 btn = tk.Button(f, text=char, font=("Arial", 11, "bold"), bg="#1F2937", fg="#F9FAFB",
-                    activebackground="#374151", activeforeground="#00E5FF", relief="flat", bd=0, 
+                    activebackground="#374151", activeforeground="#00E5FF", relief="flat", bd=0,
                     highlightbackground="#4B5563", highlightthickness=1, width=3, height=1,
                     command=lambda c=char: self.proses_tebakan(c))
                 btn.pack(side="left", padx=2)
                 btn.bind("<Enter>", lambda e, b=btn: self._on_hover(b, "#374151"))
                 btn.bind("<Leave>", lambda e, b=btn: self._on_leave(b, "#1F2937"))
                 self.keys[char] = btn
+
+    def tekan_keyboard(self, event):
+        if self.logic.game_selesai:
+            return
+
+        huruf = event.char.upper()
+
+        if not huruf.isalpha():
+            return
+
+        if huruf in self.keys:
+            tombol = self.keys[huruf]
+
+            if tombol["state"] == "normal":
+                tombol.invoke()
 
     def _on_hover(self, button, color):
         if button['state'] != 'disabled': button.configure(bg=color)
@@ -170,9 +232,9 @@ class Screen8GameplayLevel3(tk.Frame):
             col.grid(row=0, column=i, sticky="nsew", padx=6, pady=6)
 
             kotak = tk.Button(col, text=f"{nama}\n{stok}", font=("Arial", 9, "bold"), bg=warna_bg, fg="white",
-                activebackground="#4B5563", relief="flat", bd=0, highlightbackground="#374151", highlightthickness=1, 
+                activebackground="#4B5563", relief="flat", bd=0, highlightbackground="#374151", highlightthickness=1,
                 command=aksi)
-                
+
             kotak.pack(fill="both", expand=True)
             kotak.bind("<Enter>", lambda e, b=kotak: self._on_hover(b, "#4B5563"))
             kotak.bind("<Leave>", lambda e, b=kotak, c=warna_bg: self._on_leave(b, c))
@@ -181,17 +243,15 @@ class Screen8GameplayLevel3(tk.Frame):
 
     def proses_tebakan(self, h):
         is_benar, status = self.logic.proses_huruf(h)
-        if is_benar is None: 
+        if is_benar is None:
             return
 
         if is_benar:
             self.keys[h].configure(bg="#059669", fg="white", state="disabled")
             self._set_banner("#10B981", "✅  TEBAKAN BENAR! HP Musuh Berkurang")
-            winsound.Beep(1000, 120)
         else:
             self.keys[h].configure(bg="#DC2626", fg="white", state="disabled")
             self._set_banner("#EF4444", "❌  TEBAKAN SALAH!  -25 HP Kamu")
-            winsound.Beep(300, 180)
             self.guncang_window(10)
             self.flash_bar_merah(4)
 
@@ -202,20 +262,15 @@ class Screen8GameplayLevel3(tk.Frame):
     def tangani_status_game(self, status):
         if status == 'kata_terbuka':
             self.logic.pindah_kata_berjalan = True
-            winsound.Beep(1200, 100)
             self._set_banner("#10B981", "✨ KATA TERTEBAK! Menuju kata selanjutnya...")
             self.after(1000, self.lanjut_kata_berikutnya)
-            
+
         elif status == 'menang':
             self._set_banner("#10B981", "🏆  GAME SELESAI! KAMU JUARA HANGMAN!")
-            self.after(100, lambda: winsound.Beep(1200, 150))
-            self.after(250, lambda: winsound.Beep(1600, 300))
             self.kirim_hasil_ke_parent("victory")
-            
+
         elif status == 'kalah':
             self._set_banner("#EF4444", "💀  GAME OVER DI LEVEL 3!")
-            self.after(100, lambda: winsound.Beep(400, 200))
-            self.after(320, lambda: winsound.Beep(250, 400))
             self.kirim_hasil_ke_parent("defeat")
 
     def lanjut_kata_berikutnya(self):
@@ -225,6 +280,7 @@ class Screen8GameplayLevel3(tk.Frame):
             self._set_banner("#D32F2F", "KATA BARU! Tetap Fokus.")
             self.update_slots()
             self.build_keyboard()
+            self.focus_set()
 
     def kirim_hasil_ke_parent(self, mode):
         skor = self.logic.hitung_skor() if mode == "victory" else 0
@@ -235,13 +291,9 @@ class Screen8GameplayLevel3(tk.Frame):
         if hasattr(self.controller, "set_hasil_game"):
             self.controller.set_hasil_game(
                 kata=kata_dikirim, skor=skor, sisa_waktu=sisa_waktu_dikirim, hp_player=hp_player_dikirim,
-                tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, 
+                tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah,
                 huruf_ditebak=set(), mode=mode, level=3
             )
-        if mode == "victory":
-            self.after(1200, lambda: self.controller.show_frame("Screen9Victory"))
-        else:
-            self.after(1200, lambda: self.controller.show_frame("Screen10GameOver"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()
@@ -254,7 +306,6 @@ class Screen8GameplayLevel3(tk.Frame):
     def aksi_waktu(self):
         if self.logic.gunakan_waktu():
             self.render_bottom_items()
-            winsound.Beep(800, 100)
             m, s = divmod(self.logic.sisa_waktu, 60)
             self.lbl_timer.configure(text=f"⏱  {m:02d}:{s:02d}")
         else:
@@ -264,13 +315,11 @@ class Screen8GameplayLevel3(tk.Frame):
         if self.logic.gunakan_heal():
             self.perbarui_hud_bars()
             self.render_bottom_items()
-            winsound.Beep(900, 150)
         else:
             self._notif_habis("❤️ Pulihkan HP habis! Beli di Toko.")
 
     def _notif_habis(self, pesan):
         self._set_banner("#FF8F00", pesan)
-        winsound.Beep(200, 300)
         self.after(2000, lambda: self._set_banner("#D32F2F", "Pilih huruf!"))
 
     def guncang_window(self, loop):
@@ -294,66 +343,49 @@ class Screen8GameplayLevel3(tk.Frame):
         self.status_banner.configure(bg=warna)
         self.lbl_status.configure(bg=warna, text=teks)
 
-    def update_timer(self):
-        if self.logic.game_selesai: 
+    def update_timer(self, run_id=None):
+        if run_id != self._run_id:
             return
-        
+
+        if self.logic.game_selesai:
+            return
+
         if self.logic.sisa_waktu > 0 and self.logic.hp_player > 0:
             status_waktu = self.logic.kurangi_waktu()
-            
+
             if status_waktu == 'kalah':
                 self.tangani_status_game('kalah')
                 return
 
             m, s = divmod(self.logic.sisa_waktu, 60)
-            self.lbl_timer.configure(text=f"⏱  {m:02d}:{s:02d}", fg="#EF4444" if self.logic.sisa_waktu <= 20 else "#F59E0B")
-            
-            if self.logic.sisa_waktu <= 5 and not self.logic.pindah_kata_berjalan and self.logic.hp_musuh > 0:
-                winsound.Beep(600, 80)
-                
-            self.after(1000, self.update_timer)
+            self.lbl_timer.configure(text=f"⏱  {m:02d}:{s:02d}", fg="#EF4444" if self.logic.sisa_waktu <= 10 else "#F59E0B")
+
+            # Bunyikan sfx hitung mundur saat sisa waktu 10 detik atau kurang
+            if self.logic.sisa_waktu <= 10:
+                putar_sfx_hitung_mundur()
+
+            self.after(1000, lambda: self.update_timer(run_id))
         else:
             self.tangani_status_game('kalah')
-    def load_user(self, username):
-        self.username = username
 
-        db = hubungkan_database()
-        if db:
-            cursor = db.cursor()
-
-            cursor.execute(
-                "SELECT id, coins FROM users WHERE username=%s",
-                (username,)
-         )
-
-            hasil = cursor.fetchone()
-
-            if hasil:
-                self.user_id = hasil[0]
-                self.koin = hasil[1]
-
-            cursor.close()
-            db.close()
-
-# ── BAGIAN WRAPPER RUN (MOCK PARENT UNTUK TESTING) ───────────────
 if __name__ == "__main__":
     class MockParent(tk.Tk):
         def __init__(self):
             super().__init__()
             self.title("Game Hangman Level 3")
-            self.geometry("440x600")
+            self.geometry("400x700")
             self.configure(bg="#111827")
             self.game_results = {}
-            
+
         def switch_screen(self, screen_name):
             print(f"[NAVIGASI] Berhasil pindah ke: {screen_name}")
-            
+
         def set_hasil_game(self, **kwargs):
             print("[DATA] Hasil game tersimpan:")
-            self.game_results = kwargs 
+            self.game_results = kwargs
             for k, v in kwargs.items(): print(f"  - {k}: {v}")
 
     app_parent = MockParent()
-    game_frame = Screen8GameplayLevel3(parent=app_parent)
+    game_frame = Screen8GameplayLevel3(parent=app_parent, controller=app_parent)
     game_frame.pack(fill="both", expand=True)
     app_parent.mainloop()
