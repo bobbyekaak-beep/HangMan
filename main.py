@@ -13,6 +13,7 @@ from screens.page_game.level3ui import Screen8GameplayLevel3
 from screens.victory_menang.victory_menang import Screen9Victory
 from screens.game_over.game_over import Screen10GameOver
 from screens.page_game.misiharianui import ScreenDailyMission
+from audio.sound_manager import putar_musik_latar
 
 DAFTAR_HALAMAN = [
     SplashPage, LoginPage, MenuPage, PilihLevelApp, TokoView, LeaderboardView,
@@ -37,7 +38,11 @@ class HangmanApp(tk.Tk):
         # Memasukkan semua halaman ke dalam memori aplikasi
         for F in DAFTAR_HALAMAN:
             page_name = F.__name__
-            frame = F(parent=self.container, controller=self)
+            try:
+                frame = F(parent=self.container, controller=self)
+            except Exception as e:
+                print(f"[STARTUP] Gagal membuat halaman {page_name}: {e}")
+                continue
             self.frames[page_name] = frame
             # Tumpuk semua halaman di titik yang sama
             frame.grid(row=0, column=0, sticky="nsew")
@@ -45,13 +50,21 @@ class HangmanApp(tk.Tk):
         self.container.grid_rowconfigure(0, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
 
+        # Nyalakan musik latar sekali saja saat aplikasi pertama kali dibuka
+        putar_musik_latar("sound_latar.mp3")
+
         # Tampilkan splash screen saat pertama kali dibuka
         self.show_frame("SplashPage")
 
     def show_frame(self, page_name, data=None):
-        frame = self.frames[page_name]
+        frame = self.frames.get(page_name)
+        if frame is None:
+            print(f"[NAVIGASI] Halaman {page_name} tidak tersedia.")
+            return
         if data is not None and hasattr(frame, "populate_data"):
             frame.populate_data(data)
+        if hasattr(frame, "on_show"):
+            frame.on_show()  # reset game & timer setiap layar game ditampilkan
         frame.tkraise() # Angkat halaman yang dipilih ke urutan paling atas
 
     def set_hasil_game(self, **kwargs):
