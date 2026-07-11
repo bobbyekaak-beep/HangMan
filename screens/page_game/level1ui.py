@@ -1,16 +1,18 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 import random
-import winsound
 from logic.page_game.level1logic import HangmanLogic
+from audio.sound_manager import putar_sfx, kecilkan_musik_latar, putar_sfx_hitung_mundur
 
 class Screen6Gameplay(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#0F172A")
         self.parent = parent
         self.controller = controller
-        
-        self.logic = HangmanLogic()
+
+        self.logic = HangmanLogic(self._ambil_user_id())
+        self._run_id = 0
 
         self.style = ttk.Style()
         self.style.theme_use('default')
@@ -18,7 +20,29 @@ class Screen6Gameplay(tk.Frame):
         self.style.configure("Enemy.Horizontal.TProgressbar", troughcolor="#334155", background="#EF4444", thickness=14)
 
         self.setup_ui()
-        self.update_timer()
+
+        self.bind("<Key>", self.tekan_keyboard)
+        self.focus_set()
+
+    def _ambil_user_id(self):
+        if self.controller is not None and hasattr(self.controller, "user_aktif") and self.controller.user_aktif is not None:
+            return self.controller.user_aktif["id"]
+        return None
+
+    def on_show(self):
+        kecilkan_musik_latar()
+        try:
+            self.logic = HangmanLogic(self._ambil_user_id())
+        except ValueError as e:
+            messagebox.showerror("Gagal Memuat Soal", str(e))
+            self.controller.go_back()
+            return
+        self._run_id += 1
+        self.build_keyboard()
+        self.update_visuals()
+        self._set_banner("#3B82F6", "SISTEM SIAP! SILAKAN TEBAK HURUF")
+        self.focus_set()
+        self.update_timer(self._run_id)
 
     def setup_ui(self):
         hud_main = tk.Frame(self, bg="#1E293B", padx=14, pady=10, bd=0)
@@ -29,7 +53,7 @@ class Screen6Gameplay(tk.Frame):
         tk.Label(kiri, text="PLAYER HP", bg="#1E293B", font=("Impact", 10), fg="#38BDF8").pack(anchor="w")
         self.bar_p = ttk.Progressbar(kiri, mode='determinate', style="Player.Horizontal.TProgressbar")
         self.bar_p.pack(fill="x", pady=2)
-        
+
         self.lbl_hp_p = tk.Label(kiri, bg="#1E293B", font=("Arial", 9, "bold"), fg="#94A3B8")
         self.lbl_hp_p.pack(anchor="w")
 
@@ -40,7 +64,7 @@ class Screen6Gameplay(tk.Frame):
         tk.Label(kanan, text="ENEMY HP", bg="#1E293B", font=("Impact", 10), fg="#F43F5E").pack(anchor="e")
         self.bar_g = ttk.Progressbar(kanan, mode='determinate', style="Enemy.Horizontal.TProgressbar")
         self.bar_g.pack(fill="x", pady=2)
-        
+
         self.lbl_hp_g = tk.Label(kanan, bg="#1E293B", font=("Arial", 9, "bold"), fg="#94A3B8")
         self.lbl_hp_g.pack(anchor="e")
 
@@ -55,11 +79,40 @@ class Screen6Gameplay(tk.Frame):
         self.lbl_status = tk.Label(self.status_banner, bg="#3B82F6", text="SISTEM SIAP! SILAKAN TEBAK HURUF", font=("Arial", 9, "bold"), fg="white")
         self.lbl_status.pack(expand=True)
 
-        info_frame = tk.Frame(self, bg="#FFFFFF", highlightbackground="#E2E8F0", highlightthickness=1, pady=6)
+        info_frame = tk.Frame(
+            self,
+            bg="#FFFFFF",
+            highlightbackground="#E2E8F0",
+            highlightthickness=1,
+            pady=6
+        )
         info_frame.pack(fill="x", padx=12, pady=6)
-        self.lbl_level = tk.Label(info_frame, bg="#FFFFFF", font=("Arial", 11, "bold"), fg="#1E293B")
+
+        self.lbl_level = tk.Label(
+            info_frame,
+            bg="#FFFFFF",
+            font=("Arial", 11, "bold"),
+            fg="#1E293B"
+        )
         self.lbl_level.pack()
-        tk.Label(info_frame, text="Kategori: Hewan Mudah", bg="#FFFFFF", font=("Arial", 9), fg="#64748B").pack()
+
+        self.lbl_kategori = tk.Label(
+            info_frame,
+            bg="#FFFFFF",
+            font=("Arial", 10, "bold"),
+            fg="#2563EB"
+        )
+        self.lbl_kategori.pack()
+
+        self.lbl_petunjuk = tk.Label(
+            info_frame,
+            bg="#FFFFFF",
+            font=("Arial", 9),
+            fg="#64748B",
+            wraplength=360,
+            justify="center"
+        )
+        self.lbl_petunjuk.pack(pady=(3,0))
 
         self.word_frame = tk.Frame(self, bg="#0F172A")
         self.word_frame.pack(pady=10)
@@ -81,12 +134,19 @@ class Screen6Gameplay(tk.Frame):
     def update_visuals(self):
         self.bar_p['value'] = (self.logic.hp_player / self.logic.hp_player_max) * 100
         self.lbl_hp_p.configure(text=f"{self.logic.hp_player} / {self.logic.hp_player_max}")
-        
+
         self.bar_g['value'] = (self.logic.hp_musuh / self.logic.hp_musuh_max) * 100
         self.lbl_hp_g.configure(text=f"{int(self.logic.hp_musuh)} / {self.logic.hp_musuh_max}")
 
         self.lbl_level.configure(text=f"LEVEL 1 • KATA {self.logic.indeks_kata_sekarang + 1}/{len(self.logic.daftar_kata)}")
 
+        self.lbl_kategori.configure(
+        text=f"Kategori : {self.logic.kategori}"
+        )
+
+        self.lbl_petunjuk.configure(
+        text=f"Petunjuk : {self.logic.petunjuk}"
+        )
         for w in self.word_frame.winfo_children(): w.destroy()
         for char in self.logic.kata_rahasia:
             terbuka = char in self.logic.huruf_ditebak
@@ -135,6 +195,20 @@ class Screen6Gameplay(tk.Frame):
                 btn.bind("<Leave>", lambda e, b=btn: b.configure(bg="#1E293B") if b['state'] != 'disabled' else None)
                 self.keys[char] = btn
 
+    def tekan_keyboard(self, event):
+        if self.logic.game_selesai:
+            return
+
+        huruf = event.char.upper()
+
+        if not huruf.isalpha():
+            return
+
+        if huruf in self.keys:
+            tombol = self.keys[huruf]
+            if tombol["state"] == "normal":
+                tombol.invoke()
+
     def proses_tebakan(self, huruf):
         hasil, pesan = self.logic.tebak_huruf(huruf)
         if hasil is None: return
@@ -142,15 +216,14 @@ class Screen6Gameplay(tk.Frame):
         if hasil:
             self.keys[huruf].configure(bg="#059669", fg="white", state="disabled")
             self._set_banner("#10B981", pesan)
-            winsound.Beep(1000, 120)
         else:
             self.keys[huruf].configure(bg="#DC2626", fg="white", state="disabled")
             self._set_banner("#EF4444", pesan)
-            winsound.Beep(300, 180)
             self.guncang_window(10)
             self.flash_bar_merah(4)
 
         self.update_visuals()
+        self.focus_set()
         self.tangani_kondisi()
 
     def tangani_kondisi(self):
@@ -158,20 +231,15 @@ class Screen6Gameplay(tk.Frame):
 
         if status == "next_word":
             self.logic.pindah_kata_berjalan = True
-            winsound.Beep(1200, 100)
             self._set_banner("#10B981", "✨ KATA TERTEBAK! MENYAPU MUSUH BERIKUTNYA...")
             self.after(1000, self.eksekusi_kata_berikutnya)
-            
+
         elif status == "victory":
             self._set_banner("#10B981", "🏆 LEVEL 1 BERHASIL DIKLAIM! VICTORY!")
-            winsound.Beep(1200, 150)
-            winsound.Beep(1600, 300)
             self.kirim_data_ke_parent("victory")
 
         elif status == "defeat":
             self._set_banner("#EF4444", "💀 ANNIHILATED! GAME OVER!")
-            winsound.Beep(400, 200)
-            winsound.Beep(250, 400)
             self.kirim_data_ke_parent("defeat")
 
     def eksekusi_kata_berikutnya(self):
@@ -179,48 +247,43 @@ class Screen6Gameplay(tk.Frame):
             self._set_banner("#3B82F6", "KATA BARU DIMULAI! LANJUTKAN!")
             self.update_visuals()
             self.build_keyboard()
+            self.focus_set()
 
     def kirim_data_ke_parent(self, mode):
         skor = self.logic.hitung_skor() if mode == "victory" else 0
         sisa_waktu = self.logic.sisa_waktu if mode == "victory" else 0
         hp_player = self.logic.hp_player if mode == "victory" else 0
         kata = ", ".join(self.logic.daftar_kata) if mode == "victory" else self.logic.kata_rahasia
-        
+
         if hasattr(self.controller, "set_hasil_game"):
             self.controller.set_hasil_game(
                 kata=kata, skor=skor, sisa_waktu=sisa_waktu, hp_player=hp_player,
                 tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah,
                 huruf_ditebak=set(), mode=mode, level=1
             )
-        if mode == "victory":
-            self.after(1200, lambda: self.controller.show_frame("Screen9Victory"))
-        else:
-            self.after(1200, lambda: self.controller.show_frame("Screen10GameOver"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()
         if huruf_hint:
             self.proses_tebakan(huruf_hint)
+            self.focus_set()
         else:
             self._notif_habis("💡 ITEM HINT HABIS ATAU KATA SUDAH TERBUKA!")
 
     def aksi_waktu(self):
         if self.logic.gunakan_waktu():
             self.update_visuals()
-            winsound.Beep(800, 100)
         else:
             self._notif_habis("🕒 ITEM WAKTU HABIS!")
 
     def aksi_heal(self):
         if self.logic.gunakan_heal():
             self.update_visuals()
-            winsound.Beep(900, 150)
         else:
             self._notif_habis("❤️ ITEM HEAL HABIS!")
 
     def _notif_habis(self, pesan):
         self._set_banner("#D97706", pesan)
-        winsound.Beep(200, 300)
         self.after(1800, lambda: self._set_banner("#3B82F6", "SILAKAN LANJUTKAN MENEBAK") if not self.logic.game_selesai else None)
 
     def guncang_window(self, loop):
@@ -244,20 +307,24 @@ class Screen6Gameplay(tk.Frame):
         self.status_banner.configure(bg=warna)
         self.lbl_status.configure(bg=warna, text=teks)
 
-    def update_timer(self):
+    def update_timer(self, run_id=None):
+        if run_id != self._run_id:
+            return
+
         if self.logic.game_selesai: return
-        
+
         if self.logic.sisa_waktu > 0 and self.logic.hp_player > 0:
             if not self.logic.pindah_kata_berjalan and self.logic.hp_musuh > 0:
                 self.logic.sisa_waktu -= 1
-                
+
             m, s = divmod(self.logic.sisa_waktu, 60)
-            self.lbl_timer.configure(text=f"⏱ {m:02d}:{s:02d}", fg="#EF4444" if self.logic.sisa_waktu <= 15 else "#F59E0B")
-            
-            if self.logic.sisa_waktu <= 5 and not self.logic.pindah_kata_berjalan and self.logic.hp_musuh > 0:
-                winsound.Beep(600, 80)
-                
-            self.after(1000, self.update_timer)
+            self.lbl_timer.configure(text=f"⏱ {m:02d}:{s:02d}", fg="#EF4444" if self.logic.sisa_waktu <= 10 else "#F59E0B")
+
+            # Bunyikan sfx hitung mundur saat sisa waktu 10 detik atau kurang
+            if self.logic.sisa_waktu <= 10:
+                putar_sfx_hitung_mundur()
+
+            self.after(1000, lambda: self.update_timer(run_id))
         else:
             self.tangani_kondisi()
 
@@ -266,19 +333,19 @@ if __name__ == "__main__":
         def __init__(self):
             super().__init__()
             self.title("Hangman: Shadow Arcade")
-            self.geometry("440x600")
+            self.geometry("400x700")
             self.configure(bg="#0F172A")
             self.game_results = {}
-            
+
         def switch_screen(self, screen_name):
             print(f"[NAVIGASI] Berhasil pindah ke: {screen_name}")
-            
+
         def set_hasil_game(self, **kwargs):
             print("[DATA] Hasil game tersimpan:")
-            self.game_results = kwargs 
+            self.game_results = kwargs
             for k, v in kwargs.items(): print(f"  - {k}: {v}")
 
     app_parent = MockParent()
-    game_frame = Screen6Gameplay(parent=app_parent)
+    game_frame = Screen6Gameplay(parent=app_parent, controller=app_parent)
     game_frame.pack(fill="both", expand=True)
     app_parent.mainloop()
