@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
+from audio.sound_manager import putar_sfx
 class SplashPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="white")
@@ -29,9 +30,12 @@ class SplashPage(tk.Frame):
         # Tombol tunggal untuk memaksa masuk ke halaman Login
         btn_login = tk.Button(self, text="LOGIN / DAFTAR", bg="#2196F3", fg="white", font=("Arial", 12, "bold"), 
                           width=25, height=3, bd=0, 
-                          command=lambda: controller.show_frame("LoginPage"))
+                          command=lambda: self._aksi_login(controller))
         
         # Posisi y=550 agar tombol berada di bagian bawah layar
         self.canvas.create_window(200, 550, window=btn_login)
-   
 
+    def _aksi_login(self, controller):
+        # Bunyikan sfx klik lalu pindah ke halaman Login
+        putar_sfx("klik.mp3")
+        controller.show_frame("LoginPage")
