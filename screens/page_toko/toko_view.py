@@ -1,82 +1,110 @@
-from os import name
 import tkinter as tk
 from tkinter import messagebox
-import mysql.connector
-
-
-def buat_koneksi():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="db_hangman"
-    )
+from database.koneksi import hubungkan_database
+from audio.sound_manager import putar_sfx
 
 
 def ambil_koin_user(user_id):
-    koneksi = buat_koneksi()
-    cursor = koneksi.cursor()
-    cursor.execute("SELECT coins FROM users WHERE id = %s", (user_id,))
-    baris = cursor.fetchone()
-    koneksi.close()
-    return baris[0] if baris else 0
+    koneksi = hubungkan_database()
+    if koneksi is None:
+        return 0
+    cursor = None
+    try:
+        cursor = koneksi.cursor()
+        cursor.execute("SELECT coins FROM users WHERE id = %s", (user_id,))
+        baris = cursor.fetchone()
+        return baris[0] if baris else 0
+    except Exception as e:
+        print(f"[DATABASE] Error mengambil koin user: {e}")
+        return 0
+    finally:
+        if cursor is not None:
+            cursor.close()
+        koneksi.close()
 
 
 def ambil_semua_item(user_id):
-    koneksi = buat_koneksi()
-    cursor = koneksi.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT items.id, items.nama, items.icon, items.color, items.harga, items.kategori,
-               COALESCE(user_inventory.jumlah, 0) AS owned_qty
-        FROM items
-        LEFT JOIN user_inventory
-          ON user_inventory.item_id = items.id AND user_inventory.user_id = %s
-    """, (user_id,))
-    hasil = cursor.fetchall()
-    koneksi.close()
-    return hasil
+    koneksi = hubungkan_database()
+    if koneksi is None:
+        return []
+    cursor = None
+    try:
+        cursor = koneksi.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT items.id, items.nama, items.icon, items.color, items.harga, items.kategori,
+                   COALESCE(user_inventory.jumlah, 0) AS owned_qty
+            FROM items
+            LEFT JOIN user_inventory
+              ON user_inventory.item_id = items.id AND user_inventory.user_id = %s
+            ORDER BY items.id
+        """, (user_id,))
+        return cursor.fetchall()
+    except Exception as e:
+        print(f"[DATABASE] Error mengambil item toko: {e}")
+        return []
+    finally:
+        if cursor is not None:
+            cursor.close()
+        koneksi.close()
 
 
-# UPDATE coins dan INSERT ke inventory, lalu commit sekali di akhir
 def beli_item_db(user_id, item_id, harga):
-    koneksi = buat_koneksi()
-    cursor = koneksi.cursor()
-    cursor.execute(
-        "UPDATE users SET coins = coins - %s WHERE id = %s AND coins >= %s",
-        (harga, user_id, harga)
-    )
-    if cursor.rowcount == 0:
-        koneksi.close()
+    koneksi = hubungkan_database()
+    if koneksi is None:
         return False
-    cursor.execute("""
-        INSERT INTO user_inventory (user_id, item_id, jumlah)
-        VALUES (%s, %s, 1)
-        ON DUPLICATE KEY UPDATE jumlah = jumlah + 1
-    """, (user_id, item_id))
-    koneksi.commit()
-    koneksi.close()
-    return True
-
-
-def beli_paket_hemat_db(user_id, harga, item_ids):
-    koneksi = buat_koneksi()
-    cursor = koneksi.cursor()
-    cursor.execute(
-        "UPDATE users SET coins = coins - %s WHERE id = %s AND coins >= %s",
-        (harga, user_id, harga)
-    )
-    if cursor.rowcount == 0:
-        koneksi.close()
-        return False
-    for item_id in item_ids:
+    cursor = None
+    try:
+        cursor = koneksi.cursor()
+        cursor.execute(
+            "UPDATE users SET coins = coins - %s WHERE id = %s AND coins >= %s",
+            (harga, user_id, harga)
+        )
+        if cursor.rowcount == 0:
+            return False
         cursor.execute("""
             INSERT INTO user_inventory (user_id, item_id, jumlah)
             VALUES (%s, %s, 1)
             ON DUPLICATE KEY UPDATE jumlah = jumlah + 1
         """, (user_id, item_id))
-    koneksi.commit()
-    koneksi.close()
-    return True
+        koneksi.commit()
+        return True
+    except Exception as e:
+        print(f"[DATABASE] Error membeli item: {e}")
+        return False
+    finally:
+        if cursor is not None:
+            cursor.close()
+        koneksi.close()
+
+
+def beli_paket_hemat_db(user_id, harga, item_ids):
+    koneksi = hubungkan_database()
+    if koneksi is None:
+        return False
+    cursor = None
+    try:
+        cursor = koneksi.cursor()
+        cursor.execute(
+            "UPDATE users SET coins = coins - %s WHERE id = %s AND coins >= %s",
+            (harga, user_id, harga)
+        )
+        if cursor.rowcount == 0:
+            return False
+        for item_id in item_ids:
+            cursor.execute("""
+                INSERT INTO user_inventory (user_id, item_id, jumlah)
+                VALUES (%s, %s, 1)
+                ON DUPLICATE KEY UPDATE jumlah = jumlah + 1
+            """, (user_id, item_id))
+        koneksi.commit()
+        return True
+    except Exception as e:
+        print(f"[DATABASE] Error membeli paket hemat: {e}")
+        return False
+    finally:
+        if cursor is not None:
+            cursor.close()
+        koneksi.close()
 
 
 class TokoView(tk.Frame):
@@ -90,25 +118,21 @@ class TokoView(tk.Frame):
         self.db_items = []
 
         self.header_frame = tk.Frame(self, bg="white")
-        self.header_frame.pack(fill="x", pady=(15, 5), padx=15)
+        self.header_frame.pack(fill="x", ipady=10, pady=(0, 20))
 
-        tk.Button(self.header_frame, text="←", font=("Arial", 16), bg="white", fg="#333333",
-          bd=0, activebackground="white", activeforeground="#333333",
-          command=self.kembali).pack(side="left")
-        self.coin_frame = tk.Frame(self.header_frame, bg="#F5F5F5")
-        self.coin_gold = tk.Canvas(self.coin_frame, width=16, height=16, bg="#F5F5F5", highlightthickness=0)
-        self.coin_gold.create_oval(1, 1, 15, 15, fill="#FFC107", outline="#FFA000")
-        self.coin_gold.pack(side="left", padx=(8, 2), pady=4)
-        self.coin_lbl = tk.Label(self.coin_frame, text=self.format_koin(), font=("Arial", 10, "bold"),
-                                  bg="#F5F5F5", fg="black", padx=8, pady=4)
+        tk.Button(self.header_frame, text="←", font=("Arial", 17, "bold"), bg="white", fg="#333333",
+                  bd=0, activebackground="white", activeforeground="#333333",
+                  command=self.kembali).pack(side="left", padx=10)
+
+        self.coin_frame = tk.Frame(self.header_frame, bg="white")
+        self.coin_frame.pack(side="right", padx=20)
+
+        self.coin_lbl = tk.Label(self.coin_frame, text=self.format_koin(), font=("Arial", 12, "bold"),
+                                  bg="white", fg="#FF9800")
         self.coin_lbl.pack(side="left")
 
-        self.btn_misi_harian = self._buat_tombol_tambah_misi(self.header_frame, self.buka_misi_harian)
-        self.btn_misi_harian.pack(side="right")
-        self.coin_frame.pack(side="right", padx=(0, 8))
-
         self.tab_frame = tk.Frame(self, bg="#F5F5F5", highlightbackground="#F5F5F5", highlightthickness=2)
-        self.tab_frame.pack(fill="x", padx=15, pady=10)
+        self.tab_frame.pack(fill="x", padx=(12, 21), pady=10)
 
         self.btn_tab_toko = tk.Button(self.tab_frame, text="TOKO", font=("Arial", 10, "bold"), bd=0, height=2,
                                        command=lambda: self.switch_page("TOKO"))
@@ -159,7 +183,7 @@ class TokoView(tk.Frame):
         self.lbl_love_fix = tk.Label(self.bundle_row, text="♥", font=("Segoe UI Emoji", 12, "bold"), bg="white", fg="#F44336")
         self.lbl_love_fix.pack(side="left")
 
-        self.btn_bundle_price = self._buat_tombol_koin_hijau(self.bundle_row, 150, self.beli_paket_hemat)
+        self.btn_bundle_price = self._buat_tag_harga(self.bundle_row, 150, self.beli_paket_hemat)
         self.btn_bundle_price.pack(side="right")
 
         self.refresh_ui()
@@ -169,7 +193,6 @@ class TokoView(tk.Frame):
         self.populate_data()
         self.refresh_ui()
 
-    # Ambil ulang koin dan item dari database setiap halaman ini dibuka
     def populate_data(self, data=None):
         if self.controller.user_aktif:
             user_id = self.controller.user_aktif["id"]
@@ -178,63 +201,34 @@ class TokoView(tk.Frame):
             self.coin_lbl.configure(text=self.format_koin())
 
     def switch_page(self, page_name):
+        putar_sfx("klik.mp3")
         self.current_page = page_name
         self.refresh_ui()
 
     def filter_category(self, category_name):
+        putar_sfx("klik.mp3")
         self.selected_category = category_name
         self.refresh_ui()
 
     def kembali(self):
+        putar_sfx("klik.mp3")
         self.controller.go_back()
 
-    def buka_misi_harian(self):
-        self.controller.buka_misi()
-
     def format_koin(self):
-        return f"{self.coins:,}".replace(",", ".")
+        return f"💰 {self.coins:,}".replace(",", ".")
 
     def _buat_tag_harga(self, parent, harga, on_click):
         tag = tk.Frame(parent, bg="#FFFDE7", cursor="hand2")
-        koin = tk.Canvas(tag, width=12, height=12, bg="#FFFDE7", highlightthickness=0)
-        koin.create_oval(1, 1, 11, 11, fill="#FFC107", outline="#FFA000")
-        koin.pack(side="left", padx=(8, 4), pady=4)
-        lbl = tk.Label(tag, text=str(harga), font=("Arial", 8, "bold"), bg="#FFFDE7", fg="black")
-        lbl.pack(side="left", padx=(0, 8), pady=4)
+        koin = tk.Label(tag, text="💰", font=("Segoe UI Emoji", 9), bg="#FFFDE7", fg="#FFC107", anchor="center")
+        koin.pack(side="left", padx=(8, 4), pady=6)
+        lbl = tk.Label(tag, text=str(harga), font=("Arial", 8, "bold"), bg="#FFFDE7", fg="black", anchor="center")
+        lbl.pack(side="left", padx=(0, 8), pady=6)
         for w in (tag, koin, lbl):
             w.bind("<Button-1>", lambda e: on_click())
         return tag
 
-    def _buat_tombol_koin_hijau(self, parent, harga, on_click):
-        tombol = tk.Frame(parent, bg="#4CAF50", cursor="hand2")
-        koin = tk.Canvas(tombol, width=12, height=12, bg="#4CAF50", highlightthickness=0)
-        koin.create_oval(1, 1, 11, 11, fill="#FFC107", outline="#FFA000")
-        koin.pack(side="left", padx=(15, 4), pady=4)
-        lbl = tk.Label(tombol, text=str(harga), font=("Arial", 9, "bold"), bg="#4CAF50", fg="white")
-        lbl.pack(side="left", padx=(0, 15), pady=4)
-        for w in (tombol, koin, lbl):
-            w.bind("<Button-1>", lambda e: on_click())
-        return tombol
-
-    def _buat_tombol_tambah_misi(self, parent, on_click):
-        size = 28
-        canvas = tk.Canvas(parent, width=size, height=size, bg="white", highlightthickness=0, cursor="hand2")
-        self._gambar_kotak_bulat(canvas, 1, 1, size - 1, size - 1, radius=8, fill="#4CAF50", outline="#4CAF50")
-        canvas.create_text(size / 2, size / 2, text="+", font=("Arial", 13, "bold"), fill="white")
-        canvas.bind("<Button-1>", lambda e: on_click())
-        return canvas
-
-    def _gambar_kotak_bulat(self, canvas, x1, y1, x2, y2, radius, **kwargs):
-        points = [
-            x1 + radius, y1, x2 - radius, y1, x2, y1,
-            x2, y1 + radius, x2, y2 - radius, x2, y2,
-            x2 - radius, y2, x1 + radius, y2, x1, y2,
-            x1, y2 - radius, x1, y1 + radius, x1, y1,
-        ]
-        return canvas.create_polygon(points, smooth=True, **kwargs)
-
-    # Perbaikan: pakai user_aktif["id"], bukan controller.user_id yang tidak pernah ada
     def beli_item(self, itm):
+        putar_sfx("klik.mp3")
         nama_item = itm["nama"].replace("\n", " ")
         yakin = messagebox.askyesno("Konfirmasi Pembelian",
                                      f"Apakah anda yakin ingin membeli {nama_item} seharga {itm['harga']} koin?")
@@ -248,11 +242,11 @@ class TokoView(tk.Frame):
         if not berhasil:
             messagebox.showwarning("Gagal", "Pembelian tidak berhasil, coba lagi.")
             return
-        # ambil ulang dari DB supaya koin dan qty item selalu sinkron
         self.populate_data()
         self.refresh_ui()
 
     def beli_paket_hemat(self):
+        putar_sfx("klik.mp3")
         harga_paket = 150
         yakin = messagebox.askyesno("Konfirmasi Pembelian",
                                      f"Apakah anda yakin ingin membeli Paket Hemat seharga {harga_paket} koin?")
