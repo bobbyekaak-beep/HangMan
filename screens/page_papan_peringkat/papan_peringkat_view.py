@@ -1,5 +1,7 @@
 import tkinter as tk
 import math
+from database.koneksi import hubungkan_database
+from audio.sound_manager import putar_sfx
 
 
 def rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
@@ -9,12 +11,6 @@ def rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
         x1, y2, x1, y2 - r, x1, y1 + r, x1, y1
     ]
     return canvas.create_polygon(points, smooth=True, **kwargs)
-
-
-def gambar_koin(canvas, x, y, radius=7):
-    """Gambar ikon koin bulat kuning di posisi (x, y), return id-nya untuk dipindah nanti."""
-    return canvas.create_oval(x - radius, y - radius, x + radius, y + radius,
-                               fill="#F2C94C", outline="#D4A62A", width=1)
 
 
 def gambar_bintang(canvas, x, y, radius=8, fill="#F2C94C", outline="#D4A62A"):
@@ -48,7 +44,7 @@ def ambil_warna_avatar(nama):
 
 
 class LeaderboardView(tk.Frame):
-    def __init__(self, parent, controller): 
+    def __init__(self, parent, controller):
         super().__init__(parent, bg="white")
         self.controller = controller
         self.build_top_bar()
@@ -61,31 +57,22 @@ class LeaderboardView(tk.Frame):
         top.pack(fill="x", padx=15, pady=(15, 0))
 
         tk.Button(top, text="←", font=("Arial", 16, "bold"), bg="white",
-                  relief="flat", command=self.controller.go_back).pack(side="left")
+                  relief="flat", command=self._kembali).pack(side="left")
 
         right = tk.Frame(top, bg="white")
         right.pack(side="right")
 
         coin_badge = tk.Canvas(right, width=90, height=25, bg="white", highlightthickness=0)
-        coin_badge.pack(side="left", padx=(0, 8))
+        coin_badge.pack(side="left")
         rounded_rect(coin_badge, 1, 1, 89, 24, 12, fill="#FFF3D6", outline="")
-        gambar_koin(coin_badge, 20, 12, radius=8)
+        coin_badge.create_text(20, 12, text="💰", font=("Segoe UI Emoji", 12), fill="#D4A62A")
         self.coin_text_id = coin_badge.create_text(55, 12, text="0", font=("Arial", 12, "bold"))
         self.coin_badge = coin_badge
 
-        # tombol + pakai widget Button asli supaya benar-benar bisa dipencet dengan efek klik
-        btn_frame = tk.Frame(right, width=20, height=20, bg="#27AE60")
-        btn_frame.pack(side="left")
-        btn_frame.pack_propagate(False)
-
-        btn_plus = tk.Button(btn_frame, text="+", font=("Arial", 11, "bold"),
-                      bg="#27AE60", fg="white", activebackground="#219150",
-                      activeforeground="white", relief="flat", bd=0,
-                      cursor="hand2", command=self.buka_toko)
-        btn_plus.pack(fill="both", expand=True)
-
-    def buka_toko(self):
-        self.controller.show_frame("TokoView")
+    def _kembali(self):
+        # Bunyikan sfx klik lalu kembali ke halaman sebelumnya
+        putar_sfx("klik.mp3")
+        self.controller.go_back()
 
     def build_title(self):
         tk.Label(self, text="LEADERBOARD", bg="white", fg="#1a1a2e",
@@ -167,11 +154,73 @@ class LeaderboardView(tk.Frame):
 
         self.list_canvas.bind_all("<MouseWheel>", lambda e: self.list_canvas.yview_scroll(int(-e.delta / 120), "units"))
 
+    def ambil_data_leaderboard(self):
+        """Ambil ranking semua user dari database, skor = total koin_didapat."""
+        db = hubungkan_database()
+        if db is None:
+            print("[DATABASE] Gagal terhubung ke database, leaderboard kosong.")
+            return []
+
+        cursor = None
+        try:
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT u.username AS nama, COALESCE(SUM(s.koin_didapat), 0) AS skor
+                FROM users u
+                LEFT JOIN scores s ON s.user_id = u.id
+                GROUP BY u.id, u.username
+                ORDER BY skor DESC, u.username ASC
+            """)
+            hasil = cursor.fetchall()
+            return [{"rank": i, "nama": row["nama"], "skor": row["skor"]}
+                    for i, row in enumerate(hasil, start=1)]
+        except Exception as e:
+            print(f"[DATABASE] Error mengambil data leaderboard: {e}")
+            return []
+        finally:
+            if cursor is not None:
+                cursor.close()
+            db.close()
+
+    def ambil_koin_saya(self, user_id):
+        """Ambil saldo koin user dari tabel users."""
+        db = hubungkan_database()
+        if db is None:
+            return 0
+
+        cursor = None
+        try:
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT coins FROM users WHERE id = %s", (user_id,))
+            row = cursor.fetchone()
+            return row["coins"] if row else 0
+        except Exception as e:
+            print(f"[DATABASE] Error mengambil saldo koin: {e}")
+            return 0
+        finally:
+            if cursor is not None:
+                cursor.close()
+            db.close()
+
+    def on_show(self):
+        """Dipanggil controller saat halaman ditampilkan."""
+        self.muat_leaderboard()
+
+    def muat_leaderboard(self):
+        """Ambil data dari database lalu tampilkan."""
+        if self.controller is None or not hasattr(self.controller, "user_aktif") or self.controller.user_aktif is None:
+            print("[DATABASE] Mode Preview: leaderboard dilewati karena tidak ada session user aktif.")
+            return
+
+        user_aktif = self.controller.user_aktif
+        data_leaderboard = self.ambil_data_leaderboard()
+        koin_saya = self.ambil_koin_saya(user_aktif["id"])
+        self.tampilkan_data(data_leaderboard, koin_saya, user_aktif["username"])
+
     def tampilkan_data(self, data_leaderboard, koin_saya, username_saya):
         """
         data_leaderboard: list of dict dari database, contoh:
         [{"rank": 1, "nama": "PlayerOne", "skor": 2450}, ...]
-        Panggil fungsi ini setelah data diambil dari database.
         """
         self.coin_badge.itemconfig(self.coin_text_id, text=f"{koin_saya:,}".replace(",", "."))
 
@@ -234,28 +283,18 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.geometry("420x750")
+        self.user_aktif = {"id": 5, "username": "andre"}
         self.frame = LeaderboardView(self, self)
         self.frame.pack(fill="both", expand=True)
 
     def go_back(self):
         print("Kembali ke halaman sebelumnya")
 
+    def show_frame(self, nama):
+        print(f"Pindah ke {nama}")
+
 
 if __name__ == "__main__":
     app = App()
-
-    data_dummy = [
-        {"rank": 1, "nama": "PlayerOne", "skor": 2450},
-        {"rank": 2, "nama": "LexiQuiz", "skor": 2120},
-        {"rank": 3, "nama": "ThinkFast", "skor": 1980},
-        {"rank": 4, "nama": "AlphaBrain", "skor": 1750},
-        {"rank": 5, "nama": "Bobby", "skor": 1250},
-        {"rank": 6, "nama": "WordMaster", "skor": 1120},
-        {"rank": 7, "nama": "BrainyBoy", "skor": 980},
-        {"rank": 8, "nama": "PuzzleQueen", "skor": 820},
-        {"rank": 9, "nama": "WordHunter", "skor": 750},
-        {"rank": 10, "nama": "HangPro", "skor": 620},
-    ]
-    app.frame.tampilkan_data(data_dummy, koin_saya=1250, username_saya="Bobby")
-
+    app.frame.muat_leaderboard()
     app.mainloop()
