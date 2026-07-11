@@ -36,6 +36,14 @@ Gold 💰 hasil kemenangan bisa dibelanjakan di toko untuk membeli item bantuan 
 
 Semakin tinggi level, musuh yang dihadapi semakin sulit — kata yang digunakan lebih kompleks, HP musuh lebih besar, dan waktu yang diberikan lebih singkat.
 
+**Time Attack** 🎯
+
+Tersedia mode Time Attack yang menantang pemain menebak kata secara beruntun dengan batas waktu lebih ketat. Setiap akun memiliki kesempatan bermain yang terbatas, jadi manfaatkan setiap kesempatan sebaik mungkin! ⏱️
+
+**Papan Peringkat** 🏆
+
+Total Gold 💰 yang dikumpulkan setiap pemain direkap dan ditampilkan di papan peringkat untuk dibandingkan dengan pemain lain.
+
 **Game Over dan Victory** 💀🏆
 
 Jika HP pemain habis atau waktu habis, akan muncul layar Game Over. Jika berhasil menghabiskan HP musuh, akan muncul layar Victory yang menampilkan rincian Gold yang didapat.
@@ -51,7 +59,7 @@ Jika HP pemain habis atau waktu habis, akan muncul layar Game Over. Jika berhasi
 
 ## 🖥️ Alur Layar
 
-Aplikasi ini terdiri dari delapan layar: Splash Screen (pembuka), Login, Menu Utama, Pilih Level, Persiapan (cek item sebelum bertarung), Gameplay (arena tebak kata), Toko, dan Result Screen (Victory atau Game Over).
+Aplikasi ini terdiri dari sepuluh layar: Splash Screen (pembuka), Login, Menu Utama, Pilih Level, Persiapan (cek item sebelum bertarung), Gameplay (arena tebak kata), Toko, Misi Harian (Time Attack), Papan Peringkat, dan Result Screen (Victory atau Game Over).
 
 ## 🛠️ Tech Stack
 
@@ -68,6 +76,7 @@ Game ini dibangun menggunakan Python, Tkinter (library GUI bawaan Python) untuk 
 
 mysql-connector-python==9.7.0
 pillow==12.2.0
+pygame==2.6.1
 
 **Langkah instalasi**
 
