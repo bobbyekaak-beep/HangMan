@@ -1,5 +1,13 @@
 import tkinter as tk 
-from database.koneksi import hubungkan_database 
+from tkinter import messagebox
+from database.koneksi import hubungkan_database, ambil_main_time_attack, tambah_main_time_attack, BATAS_MAIN_TIME_ATTACK
+from logic.level_config import LEVEL_CONFIG, TIME_ATTACK_CONFIG
+from audio.sound_manager import putar_sfx
+
+# id item bantuan di tabel items
+ITEM_ID_PETUNJUK = 1
+ITEM_ID_TAMBAH_WAKTU = 2
+ITEM_ID_PULIHKAN_HP = 3
 
 class Screen5PersiapanPerang(tk.Frame): 
     def __init__(self, parent, controller): 
@@ -98,49 +106,139 @@ class Screen5PersiapanPerang(tk.Frame):
         bottom_frame = tk.Frame(self, bg="white") 
         bottom_frame.pack(side="bottom", fill="x", padx=20, pady=(0, 40)) 
         
-        btn_mulai = tk.Button(bottom_frame, text="MULAI PERTARUNGAN", font=("Arial", 12, "bold"), bg="#4CAF50", fg="white", activebackground="#43A047", activeforeground="white", relief="flat", height=2, command=self._action_mulai) 
-        btn_mulai.pack(fill="x", pady=(0, 10)) 
+        self.btn_mulai = tk.Button(bottom_frame, text="MULAI PERTARUNGAN", font=("Arial", 12, "bold"), bg="#4CAF50", fg="white", activebackground="#43A047", activeforeground="white", relief="flat", height=2, command=self._action_mulai) 
+        self.btn_mulai.pack(fill="x", pady=(0, 10)) 
         
         lbl_footer = tk.Label(bottom_frame, text="Persiapkan dirimu dan taklukkan kata misterius!", font=("Arial", 9), fg="#555555", bg="white") 
         lbl_footer.pack() 
 
    
-    # FUNCTION UNTUK MENERIMA DAN UPDATE DATA SECARA DINAMIS
     def populate_data(self, data):
-        """Fungsi untuk mengisi teks pada komponen canvas secara dinamis dari data luar"""
-        kategori = data.get("kategori", "HEWAN")
-        self.kategori_canvas.itemconfig(self.txt_kategori, text=kategori)
-        
-        hp_musuh = data.get("hp_musuh", "65")
-        waktu = data.get("waktu", "01:30")
-        kesulitan = data.get("kesulitan", "SEDANG")
-        
+        """Simpan level, isi layar dilakukan oleh on_show()"""
+        self.level_terpilih = data.get("level", getattr(self, "level_terpilih", 1))
+
+    def on_show(self):
+        """Dipanggil controller tiap layar ini ditampilkan"""
+        if not hasattr(self, "level_terpilih"):
+            self.level_terpilih = 1
+        self._muat_data_level()
+
+    def _muat_data_level(self):
+        """Gabung kategori & stok item dari DB dengan LEVEL_CONFIG, level 0 = mode Time Attack"""
+        level = self.level_terpilih
+        if level == 0:
+            cfg = TIME_ATTACK_CONFIG
+            kategori = cfg["kategori"]
+        else:
+            cfg = LEVEL_CONFIG.get(level, LEVEL_CONFIG[1])
+            kategori = self._ambil_kategori(level)
+        menit, detik = divmod(cfg["waktu_detik"], 60)
+
+        qty_petunjuk, qty_waktu, qty_hp = self._ambil_qty_item()
+
+        self._render_data({
+            "kategori": kategori,
+            "hp_musuh": cfg["hp_musuh"],
+            "waktu": f"{menit:02d}:{detik:02d}",
+            "kesulitan": cfg["kesulitan"],
+            "qty_petunjuk": qty_petunjuk,
+            "qty_waktu": qty_waktu,
+            "qty_hp": qty_hp,
+        })
+
+        if level == 0:
+            self._update_tombol_time_attack()
+
+    def _ambil_kategori(self, level):
+        """Ambil nama kategori kata untuk level ini dari tabel pertanyaan"""
+        db = hubungkan_database()
+        if db is None:
+            return "-"
+        cursor = None
+        try:
+            cursor = db.cursor()
+            cursor.execute("SELECT DISTINCT kategori FROM pertanyaan WHERE id_level = %s LIMIT 1", (level,))
+            hasil = cursor.fetchone()
+            return hasil[0] if hasil else "-"
+        except Exception as e:
+            print(f"[DATABASE] Error mengambil kategori: {e}")
+            return "-"
+        finally:
+            if cursor is not None:
+                cursor.close()
+            db.close()
+
+    def _ambil_qty_item(self):
+        """Ambil jumlah item bantuan milik user dari tabel user_inventory"""
+        if self.controller is None or not hasattr(self.controller, "user_aktif") or self.controller.user_aktif is None:
+            return 0, 0, 0
+
+        db = hubungkan_database()
+        if db is None:
+            return 0, 0, 0
+        cursor = None
+        try:
+            cursor = db.cursor()
+            cursor.execute("SELECT item_id, jumlah FROM user_inventory WHERE user_id = %s",
+                            (self.controller.user_aktif["id"],))
+            jumlah_per_item = dict(cursor.fetchall())
+            return (
+                jumlah_per_item.get(ITEM_ID_PETUNJUK, 0),
+                jumlah_per_item.get(ITEM_ID_TAMBAH_WAKTU, 0),
+                jumlah_per_item.get(ITEM_ID_PULIHKAN_HP, 0),
+            )
+        except Exception as e:
+            print(f"[DATABASE] Error mengambil item: {e}")
+            return 0, 0, 0
+        finally:
+            if cursor is not None:
+                cursor.close()
+            db.close()
+
+    def _render_data(self, data):
+        """Tampilkan data ke komponen canvas"""
+        self.kategori_canvas.itemconfig(self.txt_kategori, text=data["kategori"].upper())
+
         hp_canvas = self.txt_status_items["HP MUSUH_canvas"]
-        hp_canvas.itemconfig(self.txt_status_items["HP MUSUH"], text=str(hp_musuh))
-        
+        hp_canvas.itemconfig(self.txt_status_items["HP MUSUH"], text=str(data["hp_musuh"]))
+
         waktu_canvas = self.txt_status_items["WAKTU_canvas"]
-        waktu_canvas.itemconfig(self.txt_status_items["WAKTU"], text=waktu)
-        
+        waktu_canvas.itemconfig(self.txt_status_items["WAKTU"], text=data["waktu"])
+
         kesulitan_canvas = self.txt_status_items["KESULITAN_canvas"]
-        kesulitan_canvas.itemconfig(self.txt_status_items["KESULITAN"], text=kesulitan)
-        
-        qty_petunjuk = data.get("qty_petunjuk", 2)
-        qty_waktu = data.get("qty_waktu", 2)
-        qty_hp = data.get("qty_hp", 3)
-        
+        teks_kesulitan = data["kesulitan"]
+        font_kesulitan = ("Arial", 13, "bold") if len(teks_kesulitan) <= 6 else ("Arial", 10, "bold")
+        kesulitan_canvas.itemconfig(self.txt_status_items["KESULITAN"], text=teks_kesulitan, font=font_kesulitan)
+
         canvas_p = self.txt_item_qtys["petunjuk_canvas"]
-        canvas_p.itemconfig(self.txt_item_qtys["petunjuk"], text=f"x{qty_petunjuk}")
-        
+        canvas_p.itemconfig(self.txt_item_qtys["petunjuk"], text=f"x{data['qty_petunjuk']}")
+
         canvas_w = self.txt_item_qtys["tambah_waktu_canvas"]
-        canvas_w.itemconfig(self.txt_item_qtys["tambah_waktu"], text=f"x{qty_waktu}")
-        
+        canvas_w.itemconfig(self.txt_item_qtys["tambah_waktu"], text=f"x{data['qty_waktu']}")
+
         canvas_h = self.txt_item_qtys["pulihkan_hp_canvas"]
-        canvas_h.itemconfig(self.txt_item_qtys["pulihkan_hp"], text=f"x{qty_hp}")
+        canvas_h.itemconfig(self.txt_item_qtys["pulihkan_hp"], text=f"x{data['qty_hp']}")
+
+    def _update_tombol_time_attack(self):
+        """Perlihatkan sisa kesempatan main Time Attack pada tombol mulai"""
+        user_id = self.controller.user_aktif["id"] if self.controller and getattr(self.controller, "user_aktif", None) else None
+        sudah_main = ambil_main_time_attack(user_id) if user_id is not None else 0
+        habis = sudah_main >= BATAS_MAIN_TIME_ATTACK
+        self.btn_mulai.configure(
+            text="MULAI PERTARUNGAN" if not habis else f"KESEMPATAN HABIS ({sudah_main}/{BATAS_MAIN_TIME_ATTACK})",
+            bg="#4CAF50" if not habis else "#BDBDBD",
+            state="normal" if not habis else "disabled",
+        )
 
     def _action_mulai(self):
+        putar_sfx("klik.mp3")
         try:
             level = getattr(self, 'level_terpilih', 1) # Angka 1 adalah default pencegahan error
-            
+
+            if level == 0:
+                self._mulai_time_attack()
+                return
+
             # 2. Logika percabangan untuk memanggil file UI yang tepat
             if level == 1:
                 halaman_tujuan = "Screen6Gameplay"
@@ -160,15 +258,32 @@ class Screen5PersiapanPerang(tk.Frame):
         except Exception as e:
             print(f"[ERROR] Gagal memuat arena game: {e}") 
 
+    def _mulai_time_attack(self):
+        """Catat kesempatan main lalu masuk ke arena Time Attack"""
+        user_id = self.controller.user_aktif["id"] if self.controller and getattr(self.controller, "user_aktif", None) else None
+        if user_id is not None and ambil_main_time_attack(user_id) >= BATAS_MAIN_TIME_ATTACK:
+            messagebox.showinfo("Kesempatan Habis",
+                                 f"Kesempatan main Time Attack sudah habis ({BATAS_MAIN_TIME_ATTACK}x/akun).")
+            self._update_tombol_time_attack()
+            return
+        if user_id is not None:
+            tambah_main_time_attack(user_id)
+        self.controller.show_frame("ScreenDailyMission")
+
     def _action_back(self): 
+        putar_sfx("klik.mp3")
         try: 
-            self.controller.show_frame("PilihLevelApp") 
+            if getattr(self, "level_terpilih", 1) == 0:
+                self.controller.show_frame("MisiHarianApp")
+            else:
+                self.controller.go_back() 
         except AttributeError: 
-            print("[PREVIEW] Tombol Back '←' Diklik -> Kembali ke Pilih Level") 
+            print("[PREVIEW] Tombol Back '←' Diklik -> Kembali ke Menu") 
 
     def _cek_kesiapan_database(self): 
         db_koneksi = hubungkan_database() 
         if db_koneksi is not None: 
+            cursor = None
             try: 
                 cursor = db_koneksi.cursor() 
                 query = "SELECT coins FROM users WHERE username = 'mama'" 
@@ -179,34 +294,36 @@ class Screen5PersiapanPerang(tk.Frame):
             except Exception as e: 
                 print(f"[DATABASE] Error: {e}") 
             finally: 
-                cursor.close() 
+                if cursor is not None:
+                    cursor.close() 
                 db_koneksi.close() 
         else: 
             print("[DATABASE] Gagal terhubung pada halaman persiapan.") 
 
 # PENGETESAN TAMPILAN 
+class _ControllerTiruan:
+    def __init__(self):
+        self.user_aktif = {"id": 6, "username": "andre"}
+
+    def go_back(self):
+        print("Tombol kembali ditekan")
+
+    def show_frame(self, nama, data=None):
+        print(f"Pindah ke {nama}, data: {data}")
+
+
 if __name__ == "__main__": 
     root = tk.Tk() 
     root.title("Persiapan Pertarungan") 
     root.geometry("400x700") 
     root.resizable(False, False) 
     root.configure(bg="white") 
-    
-    # Simulasi data dinamis yang dikirim ke halaman persiapan
-    data_dummy_level = {
-        "kategori": "HEWAN",
-        "hp_musuh": "100",
-        "waktu": "02:00",
-        "kesulitan": "SULIT",
-        "qty_petunjuk": 5,
-        "qty_waktu": 1,
-        "qty_hp": 4
-    }
-    
-    app = Screen5PersiapanPerang(root) 
+
+    app = Screen5PersiapanPerang(root, _ControllerTiruan())
     app.pack(fill="both", expand=True) 
-    
-    # Tembakkan data ke fungsi populate_data
-    app.populate_data(data_dummy_level)
-    
+
+    # Simulasi navigasi dari halaman pilih level (ganti angka untuk uji level lain)
+    app.populate_data({"level": 3})
+    app.on_show()
+
     root.mainloop()
