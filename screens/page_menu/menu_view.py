@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-from database.koneksi import ambil_koin_user
+from database.koneksi import ambil_koin_user, ambil_highest_level, MAX_LEVEL
+from audio.sound_manager import putar_sfx, normalkan_musik_latar
 
 class MenuPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -32,23 +33,23 @@ class MenuPage(tk.Frame):
         self.label_koin.pack(side="left", padx=(0, 5))
 
         tk.Button(frame_koin, text=" ➕ ", bg="#4CAF50", fg="white", font=("Arial", 10, "bold"), bd=0,
-                  command=lambda: controller.show_frame("TokoView")).pack(side="left")
+                  command=lambda: self._pindah(controller, "TokoView")).pack(side="left")
         
         # Kumpulan Tombol Menu yang sudah dipindah dari depan
         tk.Button(self, text="MULAI PERMAINAN", bg="#4CAF50", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=lambda: controller.show_frame("Screen5PersiapanPerang")).pack(pady=8)
+                  width=25, height=2, bd=0, command=self._mulai_permainan).pack(pady=8)
                   
         tk.Button(self, text="PILIH LEVEL", bg="#2196F3", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=lambda: controller.show_frame("PilihLevelApp")).pack(pady=8)
+                  width=25, height=2, bd=0, command=lambda: self._pindah(controller, "PilihLevelApp")).pack(pady=8)
                   
         tk.Button(self, text="TOKO", bg="#FF9800", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=lambda: controller.show_frame("TokoView")).pack(pady=8)
+                  width=25, height=2, bd=0, command=lambda: self._pindah(controller, "TokoView")).pack(pady=8)
                   
-        tk.Button(self, text="MISI HARIAN", bg="#757575", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=lambda: controller.show_frame("MisiHarianApp")).pack(pady=8)
+        tk.Button(self, text="TANTANGAN", bg="#757575", fg="white", font=("Arial", 12, "bold"),
+                  width=25, height=2, bd=0, command=lambda: self._pindah(controller, "MisiHarianApp")).pack(pady=8)
                   
         tk.Button(self, text="PAPAN PERINGKAT", bg="#FF9800", fg="white", font=("Arial", 12, "bold"),
-                  width=25, height=2, bd=0, command=lambda: controller.show_frame("LeaderboardView")).pack(pady=8)
+                  width=25, height=2, bd=0, command=lambda: self._pindah(controller, "LeaderboardView")).pack(pady=8)
 
         # Tombol Keluar
         tk.Button(self, text="KELUAR (LOGOUT)", bg="#F44336", fg="white", font=("Arial", 12, "bold"),
@@ -57,6 +58,8 @@ class MenuPage(tk.Frame):
 
     def tkraise(self, aboveThis=None):
         super().tkraise(aboveThis)
+        # Pastikan musik latar selalu normal setiap kali Menu Utama tampil
+        normalkan_musik_latar()
         # Ambil ulang koin terbaru dari database setiap halaman ini tampil,
         # supaya tidak menampilkan angka lama dari saat login.
         if self.controller.user_aktif:
@@ -74,6 +77,20 @@ class MenuPage(tk.Frame):
             # Format pemisah ribuan agar 1250 tampil sebagai 1.250
             self.label_koin.config(text=f"💰 {koin:,}".replace(',', '.'))
 
+    def _pindah(self, controller, page_name):
+        # Bunyikan sfx klik lalu pindah ke halaman tujuan
+        putar_sfx("klik.mp3")
+        controller.show_frame(page_name)
+
+    def _mulai_permainan(self):
+        """Loncat ke Persiapan pada level lanjutan sesuai progres user di database"""
+        putar_sfx("klik.mp3")
+        if self.controller.user_aktif is None:
+            self.cek_akses("Mulai Permainan")
+            return
+        level = min(ambil_highest_level(self.controller.user_aktif["id"]), MAX_LEVEL)
+        self.controller.show_frame("Screen5PersiapanPerang", data={"level": level})
+
     def cek_akses(self, nama_fitur):
         # Kalau ingatan aplikasi kosong (belum login)
         if self.controller.user_aktif is None:
@@ -85,6 +102,7 @@ class MenuPage(tk.Frame):
 
     def proses_keluar(self):
         # Hapus nama dari ingatan saat menekan tombol keluar
+        putar_sfx("klik.mp3")
         self.controller.user_aktif = None
         self.controller.show_frame("SplashPage")
 
