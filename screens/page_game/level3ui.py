@@ -1,16 +1,19 @@
-# level3ui.py
 import tkinter as tk
 from tkinter import ttk
 import random
 import winsound
 from logic.page_game.level3logic import Level3Logic  # Import kelas logika
+from database.koneksi import hubungkan_database
 
 class Screen8GameplayLevel3(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#111827")
         self.parent = parent
         self.controller = controller
-        
+
+        self.username = None
+        self.user_id = None
+
         # Inisialisasi logika game
         self.logic = Level3Logic()
 
@@ -229,13 +232,16 @@ class Screen8GameplayLevel3(tk.Frame):
         sisa_waktu_dikirim = self.logic.sisa_waktu if mode == "victory" else 0
         hp_player_dikirim = self.logic.hp_player if mode == "victory" else 0
 
-        if hasattr(self.parent, "set_hasil_game"):
-            self.parent.set_hasil_game(
+        if hasattr(self.controller, "set_hasil_game"):
+            self.controller.set_hasil_game(
                 kata=kata_dikirim, skor=skor, sisa_waktu=sisa_waktu_dikirim, hp_player=hp_player_dikirim,
                 tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, 
-                huruf_ditebak=set(), mode=mode
+                huruf_ditebak=set(), mode=mode, level=3
             )
-        self.after(1200, command=lambda: self.parent.controller.show_frame("Screen9Victory"))
+        if mode == "victory":
+            self.after(1200, lambda: self.controller.show_frame("Screen9Victory"))
+        else:
+            self.after(1200, lambda: self.controller.show_frame("Screen10GameOver"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()
@@ -308,6 +314,26 @@ class Screen8GameplayLevel3(tk.Frame):
             self.after(1000, self.update_timer)
         else:
             self.tangani_status_game('kalah')
+    def load_user(self, username):
+        self.username = username
+
+        db = hubungkan_database()
+        if db:
+            cursor = db.cursor()
+
+            cursor.execute(
+                "SELECT id, coins FROM users WHERE username=%s",
+                (username,)
+         )
+
+            hasil = cursor.fetchone()
+
+            if hasil:
+                self.user_id = hasil[0]
+                self.koin = hasil[1]
+
+            cursor.close()
+            db.close()
 
 # ── BAGIAN WRAPPER RUN (MOCK PARENT UNTUK TESTING) ───────────────
 if __name__ == "__main__":

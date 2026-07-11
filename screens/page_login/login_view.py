@@ -83,7 +83,8 @@ class LoginPage(tk.Frame):
                 kursor.execute(sql, (user, password_hash, 0))
                 db.commit()
                 messagebox.showinfo("Sukses", "Akun berhasil dibuat! Silakan klik Login.")
-            except:
+            except Exception as e:
+                print(f"[DATABASE] Gagal daftar: {e}")
                 messagebox.showerror("Error", "Gagal mendaftar. Mungkin username sudah ada.")
             finally:
                 db.close()

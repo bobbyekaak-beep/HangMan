@@ -55,6 +55,10 @@ class HangmanApp(tk.Tk):
         frame.tkraise() # Angkat halaman yang dipilih ke urutan paling atas
 
     def set_hasil_game(self, **kwargs):
+        # Selalu sisipkan username user yang sedang login, supaya data yang
+        # dikirim ke halaman Victory/GameOver tidak pernah kosong / salah target.
+        if self.user_aktif:
+            kwargs.setdefault("username", self.user_aktif["username"])
         self.hasil_terakhir = kwargs
         # Otomatis pindah ke halaman menang atau kalah sambil membawa data nilai
         if kwargs.get("mode") == "victory":

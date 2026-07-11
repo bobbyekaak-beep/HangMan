@@ -2,13 +2,17 @@ import tkinter as tk
 import random
 import winsound
 from logic.page_game.misiharianlogic import DailyMissionLogic
+from database.koneksi import hubungkan_database
 
 class ScreenDailyMission(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#111827")
         self.parent = parent
         self.controller = controller
-        
+
+        self.username = None
+        self.user_id = None
+
         # Inisialisasi logika permainan dengan menghubungkan ke fungsi UI (Callback)
         self.logic = DailyMissionLogic(
             on_timer_update=self.ui_update_timer,
@@ -165,6 +169,26 @@ class ScreenDailyMission(tk.Frame):
                 tebakan_benar=self.logic.total_tebakan_benar, 
                 tebakan_salah=self.logic.total_tebakan_salah, 
                 huruf_ditebak=set(), 
-                mode=mode
+                mode=mode, level=0
             ))
-        self.after(delay, lambda: self.controller.switch_screen("MainMenu"))
+    
+    def load_user(self, username):
+        self.username = username
+
+        db = hubungkan_database()
+        if db:
+            cursor = db.cursor()
+
+            cursor.execute(
+                "SELECT id, coins FROM users WHERE username=%s",
+                (username,)
+         )
+
+            hasil = cursor.fetchone()
+
+            if hasil:
+                self.user_id = hasil[0]
+                self.koin = hasil[1]
+
+            cursor.close()
+            db.close()

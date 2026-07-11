@@ -3,12 +3,16 @@ from tkinter import ttk
 import random
 import winsound
 from logic.page_game.level2logic import Level2Logic
+from database.koneksi import hubungkan_database
 
 class Screen7GameplayLevel2(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg="#111827")
         self.parent = parent
         self.controller = controller
+
+        self.username = None
+        self.user_id = None
         
         self.logic = Level2Logic()
 
@@ -209,7 +213,7 @@ class Screen7GameplayLevel2(tk.Frame):
                 if hasattr(self.controller, "set_hasil_game"):
                     self.controller.set_hasil_game(
                         kata=", ".join(self.logic.daftar_kata), skor=skor, sisa_waktu=self.logic.sisa_waktu, hp_player=self.logic.hp_player,
-                        tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, huruf_ditebak=set(), mode="victory"
+                        tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, huruf_ditebak=set(), mode="victory", level=2
                     )
                 self.after(1200, lambda: self.controller.show_frame("Screen9Victory"))
 
@@ -223,7 +227,7 @@ class Screen7GameplayLevel2(tk.Frame):
             if hasattr(self.controller, "set_hasil_game"):
                 self.controller.set_hasil_game(
                     kata=self.logic.kata_rahasia, skor=0, sisa_waktu=0, hp_player=0,
-                    tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, huruf_ditebak=set(), mode="defeat"
+                    tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah, huruf_ditebak=set(), mode="defeat", level=2
                 )
             self.after(1200, lambda: self.controller.show_frame("Screen10GameOver"))
 
@@ -293,6 +297,27 @@ class Screen7GameplayLevel2(tk.Frame):
             self.after(1000, self.update_timer)
         else:
             self.cek_kondisi()
+
+    def load_user(self, username):
+        self.username = username
+
+        db = hubungkan_database()
+        if db:
+            cursor = db.cursor()
+
+            cursor.execute(
+                "SELECT id, coins FROM users WHERE username=%s",
+                (username,)
+         )
+
+            hasil = cursor.fetchone()
+
+            if hasil:
+                self.user_id = hasil[0]
+                self.koin = hasil[1]
+
+            cursor.close()
+            db.close()
 
 if __name__ == "__main__":
     class MockParent(tk.Tk):

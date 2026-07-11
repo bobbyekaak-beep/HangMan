@@ -1,133 +1,238 @@
 import tkinter as tk
 
-TOTAL_LEVEL = 20
-KOLOM = 4
+WIN_W = 400
+WIN_H = 700
 
-HIJAU = "#43a047"
-ABU_BG = "#eeeeee"
-ABU_TEKS = "#9e9e9e"
-BIRU_GELAP = "#1e2a38"
-BORDER = "#dcdcdc"
-KUNING = "#f4b400"
+CARD_H = 150
+CARD_GAP = 12
+
+LEVELS = [
+    {
+        "key": "easy",
+        "title": "EASY",
+        "desc": "Level mudah untuk pemula.",
+        "block": "#8BC34A",
+        "border": "#A5D6A7",
+        "bg": "#F8FCF5",
+        "text": "#558B2F",
+    },
+    {
+        "key": "medium",
+        "title": "MEDIUM",
+        "desc": "Level menantang untuk\nmengasah kemampuan.",
+        "block": "#F5B942",
+        "border": "#FFE082",
+        "bg": "#FFFDF5",
+        "text": "#F09819",
+    },
+    {
+        "key": "hard",
+        "title": "HARD",
+        "desc": "Level sulit hanya untuk\nyang hebat.",
+        "block": "#E9564B",
+        "border": "#FFAB9E",
+        "bg": "#FFF7F6",
+        "text": "#E53935",
+    },
+]
 
 
-def ambil_data_progres():
-    """Simulasi data dari database asli. Isi set berikut nomor level yang sudah selesai."""
-    return set()
+def rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
+    # kotak dengan sudut membulat
+    points = [
+        x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r,
+        x2, y2 - r, x2, y2, x2 - r, y2, x1 + r, y2,
+        x1, y2, x1, y2 - r, x1, y1 + r, x1, y1,
+    ]
+    return canvas.create_polygon(points, smooth=True, **kwargs)
 
 
-def ambil_bintang_level():
-    """Simulasi rating bintang per level (0-3) dari database. Dikosongkan dulu karena belum ada hasil."""
-    return {}
+def left_rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
+    # sudut kiri membulat, sisi kanan lurus
+    points = [
+        x1 + r, y1, x2, y1, x2, y1, x2, y2, x2, y2,
+        x1 + r, y2, x1, y2, x1, y2 - r, x1, y1 + r, x1, y1,
+    ]
+    return canvas.create_polygon(points, smooth=True, **kwargs)
+
+
+def gambar_daun(canvas, cx, cy, size, warna):
+    pts = [cx, cy - size, cx + size * 0.65, cy, cx, cy + size, cx - size * 0.65, cy]
+    canvas.create_polygon(pts, smooth=True, fill=warna, outline="")
+    canvas.create_line(cx, cy - size * 0.75, cx, cy + size * 0.75, fill="white", width=1)
+
+
+def gambar_gunung(canvas, cx, cy, size, warna_tua, warna_muda):
+    canvas.create_polygon(
+        cx - size, cy + size * 0.6, cx - size * 0.1, cy - size * 0.25, cx + size * 0.5, cy + size * 0.6,
+        fill=warna_muda, outline=""
+    )
+    canvas.create_polygon(
+        cx - size * 0.45, cy + size * 0.6, cx + size * 0.15, cy - size * 0.65, cx + size, cy + size * 0.6,
+        fill=warna_tua, outline=""
+    )
+
+
+def gambar_mahkota(canvas, cx, cy, size, warna):
+    canvas.create_rectangle(cx - size, cy + size * 0.25, cx + size, cy + size * 0.65, fill=warna, outline="")
+    canvas.create_polygon(
+        cx - size, cy + size * 0.3,
+        cx - size * 0.6, cy - size * 0.45,
+        cx - size * 0.2, cy,
+        cx, cy - size * 0.65,
+        cx + size * 0.2, cy,
+        cx + size * 0.6, cy - size * 0.45,
+        cx + size, cy + size * 0.3,
+        fill=warna, outline=""
+    )
+    for px, py in [(cx - size * 0.6, cy - size * 0.45), (cx, cy - size * 0.65), (cx + size * 0.6, cy - size * 0.45)]:
+        canvas.create_oval(px - 4, py - 4, px + 4, py + 4, fill="#FFD54F", outline="")
+
+
+def gambar_piala(canvas, cx, cy, size, warna):
+    canvas.create_rectangle(cx - size * 0.15, cy + size * 0.3, cx + size * 0.15, cy + size * 0.6, fill=warna, outline="")
+    canvas.create_rectangle(cx - size * 0.4, cy + size * 0.6, cx + size * 0.4, cy + size * 0.75, fill=warna, outline="")
+    canvas.create_oval(cx - size * 0.4, cy - size * 0.5, cx + size * 0.4, cy + size * 0.3, fill=warna, outline="")
+    canvas.create_arc(cx - size * 0.7, cy - size * 0.35, cx - size * 0.35, cy + size * 0.05,
+                       start=90, extent=180, style="arc", outline=warna, width=2)
+    canvas.create_arc(cx + size * 0.35, cy - size * 0.35, cx + size * 0.7, cy + size * 0.05,
+                       start=-90, extent=180, style="arc", outline=warna, width=2)
+
+
+def gambar_kilau(canvas, cx, cy, size, warna):
+    canvas.create_polygon(
+        cx, cy - size, cx + size * 0.25, cy - size * 0.25,
+        cx + size, cy, cx + size * 0.25, cy + size * 0.25,
+        cx, cy + size, cx - size * 0.25, cy + size * 0.25,
+        cx - size, cy, cx - size * 0.25, cy - size * 0.25,
+        smooth=False, fill=warna, outline=""
+    )
 
 
 class PilihLevelApp(tk.Frame):
-    def __init__(self, parent, controller): 
-        super().__init__(parent, bg="white")
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg="white", width=WIN_W, height=WIN_H)
         self.controller = controller
+        self.pack_propagate(False)
 
-        self.level_selesai = ambil_data_progres()
-        self.level_bintang = ambil_bintang_level()
+        content = tk.Frame(self, bg="white")
+        content.pack(expand=True)
 
-        self.buat_header()
-        self.buat_kartu_dunia()
-        self.buat_grid_level()
-        self.buat_status_bar()
+        back_btn = tk.Button(
+            self, text="←", font=("Segoe UI", 20), bg="white", fg="#757575",
+            bd=0, activebackground="white", activeforeground="#757575",
+            cursor="hand2", padx=6, pady=2, command=self.kembali
+        )
+        back_btn.place(x=15, y=15)
 
-    def level_terbuka(self, level):
-        if level <= 3:
-            return True
-        return (level - 1) in self.level_selesai
+        self.buat_header(content)
+        self.buat_kartu_level(content)
+        self.buat_footer(content)
 
-    def teks_bintang(self, level):
-        rating = self.level_bintang.get(level, 0)
-        return "★" * rating + "☆" * (3 - rating)
+    def buat_header(self, parent):
+        header = tk.Frame(parent, bg="white", width=WIN_W - 30)
+        header.pack(fill="x", pady=(0, 8))
 
-    def buat_header(self):
-        header = tk.Frame(self, bg="white")
-        header.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Button(header, text="←", font=("Arial", 16, "bold"), bg="white", command=self.controller.go_back).pack(side="left")
-        tk.Button(header, text="PILIH LEVEL", font=("Arial", 16, "bold"), bg="white").pack(side="left", padx=15)
+        tk.Label(header, text="PILIH LEVEL", bg="white", fg="#1C2A3A",
+                 font=("Segoe UI", 18, "bold")).pack()
 
-    def buat_kartu_dunia(self):
-        kartu = tk.Frame(self, bg="white", highlightbackground=BORDER, highlightthickness=1)
-        kartu.pack(fill="x", padx=20, pady=(0, 10))
+        divider = tk.Canvas(parent, width=150, height=14, bg="white", highlightthickness=0)
+        divider.pack(pady=(0, 6))
+        divider.create_line(10, 7, 60, 7, fill="#8BC34A", width=2)
+        divider.create_oval(70, 4, 76, 10, fill="#8BC34A", outline="")
+        divider.create_line(86, 7, 140, 7, fill="#8BC34A", width=2)
 
-        judul_frame = tk.Frame(kartu, bg="white")
-        judul_frame.pack(fill="x", padx=15, pady=(8, 4))
-        tk.Label(judul_frame, text="★", font=("Arial", 12), fg=KUNING, bg="white").pack(side="left")
-        tk.Label(judul_frame, text="DUNIA 1 - RIMBA BELANTARA", font=("Arial", 11, "bold"),
-                 bg="white", fg=BIRU_GELAP).pack(side="left", padx=5)
+    def kembali(self):
+        self.controller.go_back()
 
-        canvas = tk.Canvas(kartu, height=18, bg="#e0e0e0", highlightthickness=0)
-        canvas.pack(fill="x", padx=15, pady=(0, 10))
+    def buat_kartu_level(self, parent):
+        tinggi_canvas = 3 * CARD_H + 2 * CARD_GAP
+        self.cards_canvas = tk.Canvas(parent, width=WIN_W, height=tinggi_canvas, bg="white", highlightthickness=0)
+        self.cards_canvas.pack()
 
-        jumlah_selesai = len(self.level_selesai)
-        proporsi = jumlah_selesai / TOTAL_LEVEL
+        y = 0
+        for level in LEVELS:
+            self.gambar_kartu(y, level)
+            y += CARD_H + CARD_GAP
 
-        def gambar_progress(event=None):
-            canvas.delete("all")
-            lebar = canvas.winfo_width()
-            canvas.create_rectangle(0, 0, lebar * proporsi, 18, fill=HIJAU, width=0)
-            canvas.create_text(lebar - 30, 9, text=f"{jumlah_selesai}/{TOTAL_LEVEL}",
-                                fill=BIRU_GELAP, font=("Arial", 8, "bold"))
+    def gambar_kartu(self, y, level):
+        canvas = self.cards_canvas
+        x1, x2 = 20, WIN_W - 20
+        y2 = y + CARD_H
+        r = 20
+        cy = y + CARD_H / 2
 
-        canvas.bind("<Configure>", gambar_progress)
+        rounded_rect(canvas, x1, y, x2, y2, r, fill=level["bg"], outline=level["border"], width=2)
 
-    def buat_grid_level(self):
-        # padx disamakan dengan kartu dunia (20) agar lebar kiri-kanan sejajar
-        frame_grid = tk.Frame(self, bg="white")
-        frame_grid.pack(padx=20, pady=(0, 5), fill="both", expand=True)
+        block_w = 100
+        left_rounded_rect(canvas, x1, y, x1 + block_w, y2, r, fill=level["block"], outline=level["block"])
+        canvas.create_polygon(
+            x1 + block_w, cy - 20, x1 + block_w + 14, cy, x1 + block_w, cy + 20,
+            fill=level["block"], outline=level["block"]
+        )
 
-        jumlah_baris = -(-TOTAL_LEVEL // KOLOM)  # pembulatan ke atas
-        for kolom in range(KOLOM):
-            frame_grid.grid_columnconfigure(kolom, weight=1, uniform="kolom_level")
-        for baris in range(jumlah_baris):
-            frame_grid.grid_rowconfigure(baris, weight=1, uniform="baris_level")
+        circ_r = 32
+        ccx = x1 + block_w / 2
+        canvas.create_oval(ccx - circ_r, cy - circ_r, ccx + circ_r, cy + circ_r, fill="white", outline="")
 
-        for level in range(1, TOTAL_LEVEL + 1):
-            baris = (level - 1) // KOLOM
-            kolom = (level - 1) % KOLOM
-            terbuka = self.level_terbuka(level)
+        if level["key"] == "easy":
+            gambar_daun(canvas, ccx, cy, 16, level["text"])
+        elif level["key"] == "medium":
+            gambar_gunung(canvas, ccx, cy, 18, level["block"], level["border"])
+        else:
+            gambar_mahkota(canvas, ccx, cy, 16, level["text"])
 
-            if kolom == 0:
-                padx_cell = (0, 3)
-            elif kolom == KOLOM - 1:
-                padx_cell = (3, 0)
-            else:
-                padx_cell = 3
+        text_x = x1 + block_w + 25
+        canvas.create_text(text_x, y + 40, text=level["title"], font=("Segoe UI", 17, "bold"),
+                            fill=level["text"], anchor="w")
+        canvas.create_text(text_x, y + 72, text=level["desc"], font=("Segoe UI", 9),
+                            fill="#444444", anchor="w", justify="left")
+        canvas.create_text(x2 - 20, cy, text="›", font=("Segoe UI", 22, "bold"), fill=level["text"])
 
-            cell = tk.Frame(frame_grid, bg="white")
-            cell.grid(row=baris, column=kolom, padx=padx_cell, pady=5, sticky="nsew")
+        klik_area = canvas.create_rectangle(x1, y, x2, y2, fill="", outline="")
+        canvas.tag_bind(klik_area, "<Button-1>", lambda e, k=level["key"]: self.pilih_level(k))
+        canvas.tag_bind(klik_area, "<Enter>", lambda e: canvas.config(cursor="hand2"))
+        canvas.tag_bind(klik_area, "<Leave>", lambda e: canvas.config(cursor=""))
 
-            if terbuka:
-                bg, fg, state = HIJAU, "white", "normal"
-                teks = str(level)
-            else:
-                bg, fg, state = ABU_BG, ABU_TEKS, "disabled"
-                teks = "🔒"
+    def pilih_level(self, key):
+        # sesuaikan nama frame tujuan dengan yang ada di main.py
+        self.controller.show_frame("PilihLevelAngka", data={"kesulitan": key})
 
-            tombol = tk.Button(
-                cell, text=teks, font=("Arial", 12, "bold"),
-                bg=bg, fg=fg, disabledforeground=ABU_TEKS, relief="flat",
-                state=state, command=lambda lv=level: self.mulai_level(lv)
-            )
-            tombol.pack(fill="both", expand=True, pady=(0, 2))
+    def buat_footer(self, parent):
+        canvas = tk.Canvas(parent, width=WIN_W, height=70, bg="white", highlightthickness=0)
+        canvas.pack(pady=(25, 0))
 
-            warna_bintang = KUNING if terbuka else ABU_TEKS
-            tk.Label(cell, text=self.teks_bintang(level), font=("Arial", 8),
-                     bg="white", fg=warna_bintang).pack(pady=(0, 4))
+        x1, x2 = 20, WIN_W - 20
+        h = 60
+        rounded_rect(canvas, x1, 0, x2, h, 18, fill="#F2F2F2", outline="")
 
-    def buat_status_bar(self):
-        self.label_status = tk.Label(self, text="Pilih Level Untuk Mulai Bermain",
-                                      bg="white", fg=BIRU_GELAP, font=("Arial", 9))
-        self.label_status.pack(side="bottom", pady=8)
+        gambar_piala(canvas, x1 + 30, h / 2, 14, "#F5B942")
+        canvas.create_line(x1 + 55, 12, x1 + 55, h - 12, fill="#CFCFCF", width=1)
+        canvas.create_text(x1 + 70, h / 2, text="Semakin tinggi level, semakin seru\ntantangannya!",
+                            font=("Segoe UI", 8), fill="#333333", anchor="w", justify="left")
+        gambar_kilau(canvas, x2 - 20, h / 2, 7, "#4CAF50")
 
-    def mulai_level(self, level):
-        self.label_status.config(text=f"Level {level} dipilih, memuat permainan...")
-        self.controller.show_frame("Screen5PersiapanPerang", data={"level": level})
+
+class _ControllerTiruan:
+    # controller tiruan untuk uji coba mandiri
+    def __init__(self, root):
+        self.root = root
+
+    def go_back(self):
+        print("Tombol kembali ditekan")
+
+    def show_frame(self, nama_frame, data=None):
+        print(f"Pindah ke frame: {nama_frame}, data: {data}")
 
 
 if __name__ == "__main__":
-    app = PilihLevelApp()
-    app.mainloop()
+    root = tk.Tk()
+    root.title("Pilih Level")
+    root.geometry(f"{WIN_W}x{WIN_H}")
+    root.resizable(False, False)
+
+    controller = _ControllerTiruan(root)
+    frame = PilihLevelApp(root, controller)
+    frame.pack(fill="both", expand=True)
+
+    root.mainloop()

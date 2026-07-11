@@ -190,9 +190,12 @@ class Screen6Gameplay(tk.Frame):
             self.controller.set_hasil_game(
                 kata=kata, skor=skor, sisa_waktu=sisa_waktu, hp_player=hp_player,
                 tebakan_benar=self.logic.total_tebakan_benar, tebakan_salah=self.logic.total_tebakan_salah,
-                huruf_ditebak=set(), mode=mode
+                huruf_ditebak=set(), mode=mode, level=1
             )
-        self.after(1200, lambda: self.controller.show_frame("Screen9Victory"))
+        if mode == "victory":
+            self.after(1200, lambda: self.controller.show_frame("Screen9Victory"))
+        else:
+            self.after(1200, lambda: self.controller.show_frame("Screen10GameOver"))
 
     def aksi_hint(self):
         huruf_hint = self.logic.gunakan_hint()

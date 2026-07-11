@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
+from database.koneksi import ambil_koin_user
 
 class MenuPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -53,6 +54,15 @@ class MenuPage(tk.Frame):
         tk.Button(self, text="KELUAR (LOGOUT)", bg="#F44336", fg="white", font=("Arial", 12, "bold"),
                   width=25, height=2, bd=0, 
                   command=lambda: self.proses_keluar()).pack(side="bottom", pady=30)
+
+    def tkraise(self, aboveThis=None):
+        super().tkraise(aboveThis)
+        # Ambil ulang koin terbaru dari database setiap halaman ini tampil,
+        # supaya tidak menampilkan angka lama dari saat login.
+        if self.controller.user_aktif:
+            koin_terbaru = ambil_koin_user(self.controller.user_aktif["id"])
+            self.controller.user_aktif["coins"] = koin_terbaru
+        self.perbarui_tampilan()
 
     def perbarui_tampilan(self):
         # Fungsi untuk menarik data dari memori lalu mencetaknya ke layar

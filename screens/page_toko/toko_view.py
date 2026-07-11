@@ -37,6 +37,7 @@ def ambil_semua_item(user_id):
     return hasil
 
 
+# UPDATE coins dan INSERT ke inventory, lalu commit sekali di akhir
 def beli_item_db(user_id, item_id, harga):
     koneksi = buat_koneksi()
     cursor = koneksi.cursor()
@@ -168,6 +169,7 @@ class TokoView(tk.Frame):
         self.populate_data()
         self.refresh_ui()
 
+    # Ambil ulang koin dan item dari database setiap halaman ini dibuka
     def populate_data(self, data=None):
         if self.controller.user_aktif:
             user_id = self.controller.user_aktif["id"]
@@ -231,6 +233,7 @@ class TokoView(tk.Frame):
         ]
         return canvas.create_polygon(points, smooth=True, **kwargs)
 
+    # Perbaikan: pakai user_aktif["id"], bukan controller.user_id yang tidak pernah ada
     def beli_item(self, itm):
         nama_item = itm["nama"].replace("\n", " ")
         yakin = messagebox.askyesno("Konfirmasi Pembelian",
@@ -240,13 +243,13 @@ class TokoView(tk.Frame):
         if self.coins < itm["harga"]:
             messagebox.showwarning("Koin Tidak Cukup", "Koin kamu tidak cukup untuk membeli item ini.")
             return
-        berhasil = beli_item_db(self.controller.user_id, itm["id"], itm["harga"])
+        user_id = self.controller.user_aktif["id"]
+        berhasil = beli_item_db(user_id, itm["id"], itm["harga"])
         if not berhasil:
             messagebox.showwarning("Gagal", "Pembelian tidak berhasil, coba lagi.")
             return
-        self.coins -= itm["harga"]
-        itm["owned_qty"] += 1
-        self.coin_lbl.configure(text=self.format_koin())
+        # ambil ulang dari DB supaya koin dan qty item selalu sinkron
+        self.populate_data()
         self.refresh_ui()
 
     def beli_paket_hemat(self):
@@ -259,14 +262,12 @@ class TokoView(tk.Frame):
             messagebox.showwarning("Koin Tidak Cukup", "Koin kamu tidak cukup untuk membeli paket hemat ini.")
             return
         item_ids = [itm["id"] for itm in self.db_items[:3]]
-        berhasil = beli_paket_hemat_db(self.controller.user_id, harga_paket, item_ids)
+        user_id = self.controller.user_aktif["id"]
+        berhasil = beli_paket_hemat_db(user_id, harga_paket, item_ids)
         if not berhasil:
             messagebox.showwarning("Gagal", "Pembelian tidak berhasil, coba lagi.")
             return
-        self.coins -= harga_paket
-        for itm in self.db_items[:3]:
-            itm["owned_qty"] += 1
-        self.coin_lbl.configure(text=self.format_koin())
+        self.populate_data()
         self.refresh_ui()
 
     def refresh_ui(self):
